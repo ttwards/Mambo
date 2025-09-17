@@ -82,17 +82,17 @@ static void IMU_Sensor_update_predict(INS_t *data)
 
 static void IMU_Sensor_update_measurement(INS_t *data)
 {
-	// float gyro_dt = k_cyc_to_us_near32(data->gyro_curr_cyc - data->gyro_prev_cyc) *
-	// 0.000001f; data->gyro_prev_cyc = data->gyro_curr_cyc; data->gyro_curr_cyc =
-	// k_cycle_get_32();
+	float gyro_dt = k_cyc_to_us_near32(data->gyro_curr_cyc - data->gyro_prev_cyc) * 0.000001f;
+	data->gyro_prev_cyc = data->gyro_curr_cyc;
+	data->gyro_curr_cyc = k_cycle_get_32();
 
-	// float accel_dt =
-	// 	k_cyc_to_us_near32(data->accel_curr_cyc - data->accel_prev_cyc) * 0.000001f;
-	// data->accel_prev_cyc = data->accel_curr_cyc;
-	// data->accel_curr_cyc = k_cycle_get_32();
+	float accel_dt =
+		k_cyc_to_us_near32(data->accel_curr_cyc - data->accel_prev_cyc) * 0.000001f;
+	data->accel_prev_cyc = data->accel_curr_cyc;
+	data->accel_curr_cyc = k_cycle_get_32();
 
-	// IMU_QuaternionEKF_Measurement_Update(INS.Gyro[X], INS.Gyro[Y], INS.Gyro[Z], gyro_dt,
-	// 				     INS.Accel[X], INS.Accel[Y], INS.Accel[Z], accel_dt);
+	IMU_QuaternionEKF_Measurement_Update(INS.Gyro[X], INS.Gyro[Y], INS.Gyro[Z], gyro_dt,
+					     INS.Accel[X], INS.Accel[Y], INS.Accel[Z], accel_dt);
 }
 
 static void IMU_Sensor_temp_control(INS_t *data)

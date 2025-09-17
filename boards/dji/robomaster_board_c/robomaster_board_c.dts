@@ -222,7 +222,7 @@ zephyr_udc0: &usbotg_fs {
         spi-max-frequency = <8000000>;
         int-gpios = <&gpioc 4 GPIO_ACTIVE_HIGH>;
         accel-hz = "100";
-        accel-fs = <12>;
+        accel-fs = <24>;
 		int1-map-io = <0x01>;
 		int2-map-io = <0x02>;
         int1-conf-io = <0x0A>;
