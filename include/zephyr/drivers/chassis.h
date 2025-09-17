@@ -86,7 +86,7 @@ typedef void (*chassis_set_angle_t)(const struct device *dev, float angle);
 
 typedef void (*chassis_set_gyro_t)(const struct device *dev, float gyro);
 
-typedef void (*chassis_set_static_t)(const struct device *dev, bool static_angle);
+typedef int (*chassis_set_static_t)(const struct device *dev, bool static_angle);
 
 typedef chassis_status_t *(*chassis_get_status_t)(const struct device *dev);
 
@@ -166,13 +166,14 @@ __unused static void chassis_set_enabled(const struct device *dev, bool enabled)
 	}
 }
 
-__unused static void chassis_set_static(const struct device *dev, bool static_angle)
+__unused static int chassis_set_static(const struct device *dev, bool static_angle)
 {
 	const struct chassis_driver_api *api = (const struct chassis_driver_api *)dev->api;
 
 	if (api->set_static != NULL) {
-		api->set_static(dev, static_angle);
+		return api->set_static(dev, static_angle);
 	}
+	return -ENOSYS;
 }
 
 #ifdef __cplusplus
