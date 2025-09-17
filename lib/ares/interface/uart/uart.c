@@ -10,7 +10,7 @@
 #include <zephyr/net_buf.h>
 
 #include "ares/interface/ares_interface.h"
-#include "uart.h" // 确保包含了上面修改后的头文件
+#include "ares/interface/uart/uart.h"
 #include "zephyr/sys/ring_buffer.h"
 #include <ares/protocol/ares_protocol.h>
 
