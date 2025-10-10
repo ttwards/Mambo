@@ -21,8 +21,6 @@ manifest:
           - cmsis_6
           - cmsis-dsp
           - hal_st
-          - hal_stm32  # required by the nucleo_f302r8 board (STM32 based)
+          - hal_stm32
           - mcuboot
           - segger
-          - hal_nxp
-          - hal_espressif
