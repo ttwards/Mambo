@@ -9,6 +9,7 @@
 ```
 
 或手动安装：
+
 ```bash
 pip install pre-commit
 pre-commit install
@@ -58,6 +59,7 @@ west build -b dm_mc02 samples/motor/dm_demo
 ## CI 流程
 
 推送到 GitHub 后自动运行：
+
 1. 代码格式检查
 2. 多开发板编译测试
 3. 静态代码分析
@@ -66,16 +68,19 @@ west build -b dm_mc02 samples/motor/dm_demo
 ## 常见问题
 
 **Q: Pre-commit 失败？**
+
 ```bash
 make format  # 自动修复格式问题
 ```
 
 **Q: 临时跳过检查？**
+
 ```bash
 git commit --no-verify  # 不推荐！
 ```
 
 **Q: 更新依赖？**
+
 ```bash
 west update
 west build -t pristine
