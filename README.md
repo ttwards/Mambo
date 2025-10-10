@@ -76,15 +76,28 @@ Then you can have your motors running!
 
 另外，VSC_sample_configs下有.vscode的示例配置文件
 
+## 开发工具
+
+### Pre-commit 和 CI
+
+本项目使用 pre-commit 和 GitHub Actions CI 来确保代码质量。
+
+**快速设置：**
+```shell
+./setup-precommit.sh
+make check
+```
+
+详细说明请参考 [CONTRIBUTING.md](CONTRIBUTING.md)
+
 详细的文档请参考`Documents`文件夹
 
 ```
 好无聊逗逗梅总吧
-    嘬嘬嘬𐃆 ˒˒ ͏                               
+    嘬嘬嘬𐃆 ˒˒ ͏
 ͏
 ͏                             ╱|、
-                            (˚ˎ 。7 
-                            |、˜ 〵 
+                            (˚ˎ 。7
+                            |、˜ 〵
                             じしˍ,_)ノ
 ```
-

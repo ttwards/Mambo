@@ -1,0 +1,112 @@
+# SPDX-License-Identifier: Apache-2.0
+name: Pull Request 检查
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # PR 标题检查
+  pr-title-check:
+    name: 检查 PR 标题
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检查 PR 标题格式
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            test
+            chore
+          requireScope: false
+
+  # 代码大小检查
+  code-size-check:
+    name: 代码大小检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 检查代码变更大小
+        run: |
+          ADDED=$(git diff --stat origin/${{ github.base_ref }}...HEAD | tail -1 | awk '{print $4}')
+          DELETED=$(git diff --stat origin/${{ github.base_ref }}...HEAD | tail -1 | awk '{print $6}')
+          echo "新增行数: $ADDED"
+          echo "删除行数: $DELETED"
+
+          # 警告：如果单个 PR 修改超过 1000 行
+          if [ "$ADDED" -gt 1000 ]; then
+            echo "⚠️  警告: PR 修改行数较多 ($ADDED 行)，建议拆分成多个小 PR"
+          fi
+
+  # 许可证检查
+  license-check:
+    name: 许可证检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 检查新增文件是否包含 SPDX 许可证头
+        run: |
+          EXIT_CODE=0
+          for file in $(git diff --name-only --diff-filter=A origin/${{ github.base_ref }}...HEAD); do
+            if [[ "$file" =~ \.(c|cpp|h|py|cmake)$ ]]; then
+              if ! grep -q "SPDX-License-Identifier" "$file"; then
+                echo "❌ $file 缺少 SPDX 许可证头"
+                EXIT_CODE=1
+              fi
+            fi
+          done
+          exit $EXIT_CODE
+
+  # 检查是否修改了关键文件
+  critical-files-check:
+    name: 关键文件检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 检查是否修改了关键文件
+        run: |
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+
+          # 关键文件列表
+          CRITICAL_FILES=".github/workflows/ci.yml west.yml .pre-commit-config.yaml"
+
+          for file in $CRITICAL_FILES; do
+            if echo "$CHANGED_FILES" | grep -q "^$file$"; then
+              echo "⚠️  检测到关键文件被修改: $file"
+              echo "请确保你了解这个修改的影响，并在 PR 描述中说明修改原因"
+            fi
+          done
+
+  # 评论 PR
+  pr-comment:
+    name: PR 自动评论
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - name: 添加欢迎评论
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '👋 感谢您的贡献！\n\n请确保：\n- ✅ 代码通过所有 CI 检查\n- ✅ 遵循项目编码规范\n- ✅ 添加必要的文档说明\n- ✅ 在实际硬件上测试（如果适用）\n\n详细的贡献指南请参考 [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md)'
+            })

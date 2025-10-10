@@ -1,0 +1,157 @@
+# SPDX-License-Identifier: Apache-2.0
+name: CI 持续集成
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  # 代码格式检查
+  code-format-check:
+    name: 代码格式检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装 pre-commit
+        run: |
+          pip install pre-commit
+          pre-commit --version
+
+      - name: 运行 pre-commit 检查
+        run: |
+          pre-commit run --all-files --show-diff-on-failure
+
+  # Zephyr 构建测试
+  build-samples:
+    name: 编译示例程序
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        board:
+          - robomaster_board_c
+          - robomaster_board_a
+          - dm_mc02
+        sample:
+          - samples/motor/dji_m3508_demo
+          - samples/motor/dm_demo
+        exclude:
+          # 排除不兼容的组合（如果有的话）
+          - board: dm_mc02
+            sample: samples/motor/dji_m3508_demo
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          path: motor
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git cmake ninja-build gperf ccache dfu-util \
+            device-tree-compiler wget python3-dev python3-pip \
+            python3-setuptools python3-wheel xz-utils file make \
+            gcc gcc-multilib g++-multilib libsdl2-dev libmagic1
+
+      - name: 安装 West
+        run: |
+          pip install --upgrade pip
+          pip install west
+
+      - name: 初始化 West 工作空间
+        run: |
+          cd motor
+          west init -l .
+          west update
+          west zephyr-export
+          pip install -r ../zephyr/scripts/requirements.txt
+
+      - name: 下载 Zephyr SDK
+        run: |
+          cd ~
+          wget -q https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.8/zephyr-sdk-0.16.8_linux-x86_64.tar.xz
+          tar xf zephyr-sdk-0.16.8_linux-x86_64.tar.xz
+          cd zephyr-sdk-0.16.8
+          ./setup.sh -t arm-zephyr-eabi -h -c
+
+      - name: 设置缓存
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ccache
+            ~/zephyr-sdk-0.16.8
+          key: ${{ runner.os }}-zephyr-sdk-${{ hashFiles('motor/west.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-zephyr-sdk-
+
+      - name: 编译示例程序 - ${{ matrix.sample }} for ${{ matrix.board }}
+        run: |
+          cd motor
+          export ZEPHYR_SDK_INSTALL_DIR=~/zephyr-sdk-0.16.8
+          west build -b ${{ matrix.board }} ${{ matrix.sample }} --pristine
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: build-${{ matrix.board }}-${{ matrix.sample }}
+          path: |
+            motor/build/zephyr/zephyr.elf
+            motor/build/zephyr/zephyr.bin
+            motor/build/zephyr/zephyr.hex
+          retention-days: 7
+
+  # 静态代码分析
+  static-analysis:
+    name: 静态代码分析
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 clang-tidy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy
+
+      - name: 运行 clang-tidy（drivers）
+        run: |
+          find drivers -name '*.c' -o -name '*.cpp' | xargs clang-tidy --checks='-*,readability-*,bugprone-*' --warnings-as-errors='' || true
+
+  # 文档检查
+  documentation-check:
+    name: 文档检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 检查 Markdown 文件
+        uses: DavidAnson/markdownlint-cli2-action@v18
+        with:
+          globs: '**/*.md'
+        continue-on-error: true  # 暂时不阻塞 CI
+
+      - name: 检查链接
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'yes'
+        continue-on-error: true  # 暂时不阻塞 CI

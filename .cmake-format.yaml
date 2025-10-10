@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+# CMake 格式化配置
+
+with_docs: true
+with_comments: true
+
+format:
+  line_width: 100
+  tab_size: 2
+  use_tabchars: false
+  max_subgroups_hwrap: 2
+  max_pargs_hwrap: 6
+  max_rows_cmdline: 2
+  separate_ctrl_name_with_space: false
+  separate_fn_name_with_space: false
+  dangle_parens: false
+
+markup:
+  enable_markup: false
+
+lint:
+  disabled_codes:
+    - C0113  # 禁用特定的警告
