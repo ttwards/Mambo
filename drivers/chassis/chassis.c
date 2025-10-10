@@ -82,12 +82,16 @@ void cchassis_set_gyro(const struct device *dev, float gyro)
 	data->angleControl = false;
 }
 
-void cchassis_set_static(const struct device *dev, bool static_angle)
+int cchassis_set_static(const struct device *dev, bool static_angle)
 {
 	chassis_data_t *data = dev->data;
 	data->static_angle = static_angle;
 	data->target_status.speedX = 0;
 	data->target_status.speedY = 0;
+	if (fabsf(data->set_status.speedX) > 0.08f || fabsf(data->set_status.speedY) > 0.08f) {
+		return -EBUSY;
+	}
+	return 0;
 }
 
 chassis_status_t *cchassis_get_status(const struct device *dev)

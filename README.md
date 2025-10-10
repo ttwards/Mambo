@@ -2,14 +2,7 @@
 ## 该项目希望以设备树形式描述机器人
 ### 最终的效果将如example.dts所示
 The structure is as shown below
-![structure](https://github.com/ttwards/motor/structure.png "Structure")
-目前我们仅完成了RM M3508电机的驱动
-## TODO List
-- 完成RM M3508,M2006电机驱动✅
-- 完成达喵电机驱动✅
-- 完成运动解算设备
-- ......
-#### 目前想法还并不是很成熟，球球大佬建议
+![structure](https://mirrors.sustech.edu.cn/git/12411711/mambo/-/blob/main/structure.png "Structure")
 ## 如何在我的开发板上运行？（以Robomaster Developement Board C为例）
 ### Initialization
 
@@ -24,6 +17,12 @@ sudo apt install --no-install-recommends git cmake ninja-build gperf \
 ```
 ### You should have a virtual environment if Python tells you to do so
 
+可以提前更换PIP源:
+```shell
+pip install --upgrade pip --index-url https://mirrors.sustech.edu.cn/pypi/web/simple
+pip config set global.index-url https://mirrors.sustech.edu.cn/pypi/web/simple
+```
+
 ```shell
 pip install west
 ```
@@ -34,7 +33,7 @@ command:
 
 ```shell
 # initialize my-workspace for the example-application (main branch)
-west init -m https://github.com/ttwards/motor --mr master my-workspace
+west init -m https://mirrors.sustech.edu.cn/git/12411711/mambo --mr master my-workspace
 # update Zephyr modules
 cd my-workspace
 west update
@@ -52,17 +51,17 @@ west sdk install
 To build the application, run the following command:
 
 ```shell
-cd motor
-west build -b $BOARD motor
+cd mambo
+west build -b robomaster_board_c samples\motor\dji_m3508_demo
 ```
 
-where `$BOARD` is the target board. Here you can use `robomaster_board_c`
+`$BOARD` is the target board. Here you can use `robomaster_board_c`
 
 A sample debug configuration is also provided. To apply it, run the following
 command:
 
 ```shell
-west build -b $BOARD blinky -- -DOVERLAY_CONFIG=debug.conf
+west build -b $BOARD samples\motor\dji_m3508_demo
 ```
 
 Once you have built the application, run the following command to flash it:
@@ -70,26 +69,15 @@ Once you have built the application, run the following command to flash it:
 ```shell
 west flash
 ```
-默认为stlink, 如果使用cmsis-dap请加上`--runner openocd`, Jlink则为`--runner jlink`
+默认为cmsis-dap, 如果使用stlink请加上`--runner stlink`, Jlink则为`--runner jlink`
 If everything goes well, the LED on the board should be blinking
 
 Then you can have your motors running!
 
-```shell
-west build -p auto -b $BOARD motor 
-```
-You should have two motors set at 0x201 and 0x202, connected to CAN1.
-If everything goes well, you should see them at rpm 1222.
-The RPM is graphed via UART1
-
-另外，VS Code在下栏会显示一系列tasks，你可以在`.vscode/tasks.json`中找到它们的设置
+另外，VSC_sample_configs下有.vscode的示例配置文件
 
 详细的文档请参考`Documents`文件夹
 
-### App
-我们的App都放在app目录下
-`git submodule update --init`
-从子仓库中抓取所有的数据找到父级仓库对应的那次子仓库的提交id并且检出到父项目的目录中。
 ```
 好无聊逗逗梅总吧
     嘬嘬嘬𐃆 ˒˒ ͏                               
