@@ -27,6 +27,7 @@
 	};
 
 	aliases {
+		led0 = &led_0_b;
 		led-red = &led_2_red;
 		led-green = &led_1_green;
 		led-blue = &led_0_blue;
@@ -48,6 +49,22 @@
 		};
 		led_2_red: led_2_red {
 			pwms = <&pwm5 3 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		led_0_b: led_0_b {
+			gpios = <&gpioh 10 GPIO_ACTIVE_HIGH>;
+			label = "LED0";
+		};
+		led_1_g: led_1_g {
+			gpios = <&gpioh 11 GPIO_ACTIVE_HIGH>;
+			label = "LED1";
+		};
+		led_2_r: led_2_r {
+			gpios = <&gpioh 12 GPIO_ACTIVE_HIGH>;
+			label = "LED2";
 		};
 	};
 
