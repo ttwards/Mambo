@@ -33,7 +33,7 @@ command:
 
 ```shell
 # initialize my-workspace for the example-application (main branch)
-west init -m https://mirrors.sustech.edu.cn/git/12411711/mambo --mr master my-workspace
+west init -m https://www.github.com/ttwards/mambo --mr master my-workspace
 # update Zephyr modules
 cd my-workspace
 west update
