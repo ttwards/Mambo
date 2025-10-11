@@ -4,19 +4,19 @@
     speed_pid_m3508: speed_pid_m3508 {
         compatible = "pid,single";
         #controller-cells = <0>;
-        k_p = <800>;
-        k_i = <50>;
-        k_d = <10>;
-        out_max = <2>;
+        k_p = "8";
+        k_i = "0.5";
+        k_d = "0.1";
+        out_max = "2";
     };
 
     angle_pid_m3508: angle_pid_m3508 {
         compatible = "pid,single";
         #controller-cells = <0>;
-        k_p = <1200>;
-        k_i = <0>;
-        k_d = <200>;
-        out_max = <50>;
+        k_p = "10";
+        k_i = "0";
+        k_d = "2";
+        out_max = "50";
     };
 
     m3508_motor: m3508_motor {
