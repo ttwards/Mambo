@@ -95,7 +95,7 @@ jobs:
 
       - name: 编译示例程序 - ${{ matrix.sample }} for ${{ matrix.board }}
         run: |
-          west build -b ${{ matrix.board }} motor/${{ matrix.sample }} --pristine
+          west build -b ${{ matrix.board }} mambo/${{ matrix.sample }} --pristine
 
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
