@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(motor)
 
-FILE(GLOB app_sources src/*.c)
+file(GLOB app_sources src/*.c)
 
 include_directories(${ZEPHYR_BASE}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -14,4 +14,3 @@ target_sources(app PRIVATE ${app_sources})
 target_include_directories(app PRIVATE ${ZEPHYR_BASE}/include)
 target_include_directories(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/dts)
-

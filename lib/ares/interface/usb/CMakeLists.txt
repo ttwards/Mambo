@@ -3,8 +3,6 @@
 
 zephyr_library()
 
-set(USB_BULK_INTERFACE_SOURCES
-	usb_bulk.c
-)
+set(USB_BULK_INTERFACE_SOURCES usb_bulk.c)
 
 zephyr_library_sources(${USB_BULK_INTERFACE_SOURCES})

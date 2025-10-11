@@ -3,8 +3,6 @@
 
 zephyr_library()
 
-set(UART_INTERFACE_SOURCES
-	uart.c
-)
+set(UART_INTERFACE_SOURCES uart.c)
 
 zephyr_library_sources(${UART_INTERFACE_SOURCES})

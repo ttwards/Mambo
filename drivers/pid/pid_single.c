@@ -24,7 +24,8 @@
 		.output_limit = DT_STRING_UNQUOTED_OR(node_id, out_max, 0),                        \
 		.detri_lpf = DT_STRING_UNQUOTED_OR(node_id, detri_lpf, NAN),                       \
 		.k_i = DT_STRING_UNQUOTED_OR(node_id, k_i, NAN),                                   \
-		.k_d = DT_STRING_UNQUOTED_OR(node_id, k_d, NAN), .mit = false,                     \
+		.k_d = DT_STRING_UNQUOTED_OR(node_id, k_d, NAN),                                   \
+		.mit = false,                                                                      \
 		.output_offset = DT_STRING_UNQUOTED_OR(node_id, offset, 0),                        \
 	}
 

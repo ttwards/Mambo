@@ -15,7 +15,7 @@ properties:
     required: true
   can_channel:
     type: phandle
-    required: true  
+    required: true
   gear_ratio:
     type: string
     required: true

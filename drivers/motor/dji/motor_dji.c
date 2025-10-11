@@ -33,11 +33,21 @@ const struct device *motor_devices[] = {DT_INST_FOREACH_STATUS_OKAY(DJI_DEVICE_P
 
 #define CTRL_STRUCT_DATA(i, _)                                                                     \
 	{                                                                                          \
-		.can_dev = NULL, .flags = 0, .full = {false}, .mask = {0},                         \
-		.mapping = {                                                                       \
-			{-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1},    \
-			{-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1},    \
-		},                                                                                 \
+		.can_dev = NULL,                                                                   \
+		.flags = 0,                                                                        \
+		.full = {false},                                                                   \
+		.mask = {0},                                                                       \
+		.mapping =                                                                         \
+			{                                                                          \
+				{-1, -1, -1, -1},                                                  \
+				{-1, -1, -1, -1},                                                  \
+				{-1, -1, -1, -1},                                                  \
+				{-1, -1, -1, -1},                                                  \
+				{-1, -1, -1, -1},                                                  \
+				{-1, -1, -1, -1},                                                  \
+				{-1, -1, -1, -1},                                                  \
+				{-1, -1, -1, -1},                                                  \
+			},                                                                         \
 	}
 
 static int frameID_to_index(int tx_id)

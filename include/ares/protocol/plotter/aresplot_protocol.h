@@ -79,15 +79,15 @@ typedef enum {
 
 // ACK状态码 Status codes for CMD_ACK
 typedef enum {
-	ARES_STATUS_OK = 0x00,                     // 成功
-	ARES_STATUS_ERROR_CHECKSUM = 0x01,         // 接收到的帧校验和错误
-	ARES_STATUS_ERROR_UNKNOWN_CMD = 0x02,      // 未知命令
-	ARES_STATUS_ERROR_INVALID_PAYLOAD = 0x03,  // Payload 格式或长度错误
-	ARES_STATUS_ERROR_ADDR_INVALID = 0x04,     // 无效地址 (如对齐、范围)
-	ARES_STATUS_ERROR_TYPE_UNSUPPORTED = 0x05, // 不支持的数据类型
+	ARES_STATUS_OK = 0x00,                      // 成功
+	ARES_STATUS_ERROR_CHECKSUM = 0x01,          // 接收到的帧校验和错误
+	ARES_STATUS_ERROR_UNKNOWN_CMD = 0x02,       // 未知命令
+	ARES_STATUS_ERROR_INVALID_PAYLOAD = 0x03,   // Payload 格式或长度错误
+	ARES_STATUS_ERROR_ADDR_INVALID = 0x04,      // 无效地址 (如对齐、范围)
+	ARES_STATUS_ERROR_TYPE_UNSUPPORTED = 0x05,  // 不支持的数据类型
 	ARES_STATUS_ERROR_RATE_UNACHIEVABLE = 0x06, // 无法达到请求的采样率
 	ARES_STATUS_ERROR_MCU_BUSY_OR_LIMIT = 0x07, // MCU 繁忙或内部资源限制
-	ARES_STATUS_ERROR_GENERAL_FAIL = 0xFF // 通用失败
+	ARES_STATUS_ERROR_GENERAL_FAIL = 0xFF       // 通用失败
 } aresplot_ack_status_t;
 
 // Parser states
@@ -105,7 +105,7 @@ enum aresplot_parser_state {
 typedef struct {
 	void *ptr; // 指向变量内存地址的指针 Pointer to the variable's memory address
 	aresplot_original_type_t type; // 变量的原始数据类型 Original data type of the variable
-	const char *name;  // Optional variable name
+	const char *name;              // Optional variable name
 } aresplot_var_info_t;
 
 // Plotter protocol data structure
@@ -113,7 +113,7 @@ struct aresplot_protocol_data {
 	const char *name;
 
 	uint8_t tx_buf_len;
-	
+
 	// Parser state
 	enum aresplot_parser_state state;
 	uint8_t rx_buffer[ARESPLOT_SHARED_BUFFER_SIZE];
@@ -121,37 +121,38 @@ struct aresplot_protocol_data {
 	uint16_t rx_payload_idx;
 	uint8_t rx_cmd;
 	uint8_t rx_checksum_calculated;
-	
+
 	// Variable monitoring
 	aresplot_var_info_t monitor_vars[ARESPLOT_MAX_VARS_TO_MONITOR];
 	uint8_t num_monitor_vars;
 	bool monitoring_active;
-	
+
 	// Timing
 	uint32_t sample_period_ms;
 	uint32_t last_sample_time;
-	
+
 	// Transmit buffer
 	uint8_t tx_buffer[ARESPLOT_SHARED_BUFFER_SIZE];
-	
+
 	// Connection state
 	bool online;
 	uint32_t last_receive_time;
-	
+
 	struct k_timer sample_timer;
 	struct k_mutex vars_mutex;
 
 #if ARESPLOT_ENABLE_ERROR_REPORT
 	// 错误报告发送相关
-	volatile uint8_t error_report_pending; // 是否有错误报告等待发送
-	uint8_t error_report_code_to_send;     // 要发送的错误码
+	volatile uint8_t error_report_pending;                          // 是否有错误报告等待发送
+	uint8_t error_report_code_to_send;                              // 要发送的错误码
 	char error_report_msg_to_send[ARESPLOT_SHARED_BUFFER_SIZE - 7]; // 错误消息缓冲区
-	uint8_t error_report_msg_len_to_send; // 错误消息长度
+	uint8_t error_report_msg_len_to_send;                           // 错误消息长度
 #endif
 };
 
 // User API functions
-int plotter_add_variable(struct AresProtocol *protocol, void *ptr, aresplot_original_type_t type, const char *name);
+int plotter_add_variable(struct AresProtocol *protocol, void *ptr, aresplot_original_type_t type,
+			 const char *name);
 int plotter_remove_variable(struct AresProtocol *protocol, void *ptr);
 int plotter_set_sample_rate(struct AresProtocol *protocol, uint32_t period_ms);
 
@@ -160,35 +161,36 @@ int plotter_set_sample_rate(struct AresProtocol *protocol, uint32_t period_ms);
  * @brief (可选) 发送一个错误报告给上位机
  * (Optional) Sends an error report to the host PC.
  */
-int aresplot_report_error(struct AresProtocol *protocol, uint8_t error_code, const char *message, uint8_t msg_len);
+int aresplot_report_error(struct AresProtocol *protocol, uint8_t error_code, const char *message,
+			  uint8_t msg_len);
 #endif
 
 // Protocol definition macro
-#define PLOTTER_PROTOCOL_DEFINE(Protocol_name)                                               \
-	struct AresProtocolAPI Protocol_name##_api = {                                           \
-		.handle = ares_plotter_protocol_handle,                                              \
-		.handle_byte = ares_plotter_protocol_handle_byte,                                    \
-		.event = ares_plotter_protocol_event,                                                \
-		.init = ares_plotter_protocol_init,                                                  \
-	};                                                                                        \
-	struct aresplot_protocol_data Protocol_name##_data = {                                   \
-		.name = #Protocol_name,                                                              \
-		.state = ARES_RX_STATE_WAIT_SOP,                                                     \
-		.rx_payload_len = 0,                                                                 \
-		.rx_payload_idx = 0,                                                                 \
-		.rx_cmd = 0,                                                                         \
-		.rx_checksum_calculated = 0,                                                         \
-		.num_monitor_vars = 0,                                                               \
-		.monitoring_active = true,                                                           \
-		.sample_period_ms = 1000 / CONFIG_ARESPLOT_FREQ,                               \
-		.last_sample_time = 0,                                                               \
-		.online = false,                                                                     \
-		.last_receive_time = 0,                                                              \
-	};                                                                                        \
-	struct AresProtocol Protocol_name = {                                                    \
-		.name = #Protocol_name,                                                              \
-		.api = &Protocol_name##_api,                                                         \
-		.priv_data = &Protocol_name##_data,                                                  \
+#define PLOTTER_PROTOCOL_DEFINE(Protocol_name)                                                     \
+	struct AresProtocolAPI Protocol_name##_api = {                                             \
+		.handle = ares_plotter_protocol_handle,                                            \
+		.handle_byte = ares_plotter_protocol_handle_byte,                                  \
+		.event = ares_plotter_protocol_event,                                              \
+		.init = ares_plotter_protocol_init,                                                \
+	};                                                                                         \
+	struct aresplot_protocol_data Protocol_name##_data = {                                     \
+		.name = #Protocol_name,                                                            \
+		.state = ARES_RX_STATE_WAIT_SOP,                                                   \
+		.rx_payload_len = 0,                                                               \
+		.rx_payload_idx = 0,                                                               \
+		.rx_cmd = 0,                                                                       \
+		.rx_checksum_calculated = 0,                                                       \
+		.num_monitor_vars = 0,                                                             \
+		.monitoring_active = true,                                                         \
+		.sample_period_ms = 1000 / CONFIG_ARESPLOT_FREQ,                                   \
+		.last_sample_time = 0,                                                             \
+		.online = false,                                                                   \
+		.last_receive_time = 0,                                                            \
+	};                                                                                         \
+	struct AresProtocol Protocol_name = {                                                      \
+		.name = #Protocol_name,                                                            \
+		.api = &Protocol_name##_api,                                                       \
+		.priv_data = &Protocol_name##_data,                                                \
 	};
 
-#endif // ARES_PLOTTER_PROTOCOL_H 
+#endif // ARES_PLOTTER_PROTOCOL_H

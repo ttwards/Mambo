@@ -3,18 +3,16 @@
 
 zephyr_library()
 
-file(GLOB MAHONY_SOURCES
-	"${CMAKE_CURRENT_SOURCE_DIR}/*.c"
-)
+file(GLOB MAHONY_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 
 zephyr_library_sources(${MAHONY_SOURCES})
 
 zephyr_library_compile_options(
-    -O0
-    # -fno-strict-overflow
-    # -fno-common
-    # -ffunction-sections
-    # -fdata-sections
-    # -ffreestanding
-    # -fno-builtin
+  -O0
+  # -fno-strict-overflow
+  # -fno-common
+  # -ffunction-sections
+  # -fdata-sections
+  # -ffreestanding
+  # -fno-builtin
 )

@@ -48,7 +48,7 @@ struct AresInterface {
 	const struct AresInterfaceAPI *api;
 	struct AresProtocol *protocol; // The protocol loaded onto this interface
 
-	void *priv_data;    // Interface-specific private data (e.g., UART device ptr)
+	void *priv_data; // Interface-specific private data (e.g., UART device ptr)
 };
 
 #ifdef __cplusplus

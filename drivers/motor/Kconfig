@@ -40,7 +40,7 @@ config MOTOR_MI
       Add support for mi motors
     select PID
     select MOTOR_COMMON
-    
+
 config MOTOR_LOG_LEVEL
     int "Motor log level"
     default 4

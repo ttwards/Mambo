@@ -33,7 +33,7 @@
 		led9 = &led_1_red;
 
 		watchdog0 = &iwdg;
-		
+
 	};
 
 	leds {
@@ -174,7 +174,7 @@
 	pinctrl-names = "default";
 	current-speed = <115200>;
 	status = "okay";
-	
+
 };
 
 &usart6 {
@@ -191,14 +191,14 @@
 	pinctrl-names = "default";
 	current-speed = <115200>;
 	status = "okay";
-	
+
 };
 &uart7 {
 	pinctrl-0 = <&uart7_tx_pe8 &uart7_rx_pe7>;
 	pinctrl-names = "default";
 	current-speed = <115200>;
 	status = "okay";
-	
+
 };
 
 zephyr_udc0: &usbotg_fs {
@@ -233,7 +233,7 @@ zephyr_udc0: &usbotg_fs {
 					&tim1_ch3_pe13
 					&tim1_ch4_pe14>;
 		pinctrl-names = "default";
-		
+
 	};
 };
 //zyxw
@@ -297,7 +297,7 @@ zephyr_udc0: &usbotg_fs {
 	#size-cells = <0>;
 	st,adc-prescaler = <4>;
 	status = "okay";
-	
+
 	// vref-mv
 	// num-sampling-time-common-channels
 	channel@8 {
@@ -348,9 +348,5 @@ zephyr_udc0: &usbotg_fs {
 			&spi5_sck_pf7
 			&spi5_nss_pf6>;
 	pinctrl-names="default";
-	// mpu6600@0 
+	// mpu6600@0
 };
-
-
-
-

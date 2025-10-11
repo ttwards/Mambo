@@ -44,10 +44,10 @@
     "editor.formatOnType": true,//敲完一行代码自动格式化
     "editor.smoothScrolling": true,//使编辑器滚动变平滑
     "editor.wordWrap": "on",//在文件内容溢出vscode显示区域时自动折行
-    
+
     "editor.renderWhitespace": "boundary",//除了两个单词之间用于分隔单词的一个空格，以一个小灰点的样子使空格可见
 
-    /*terminal*/	
+    /*terminal*/
 	"terminal.integrated.defaultProfile.linux": "zsh",
 	"terminal.integrated.profiles.linux": {
 		"zsh": {
@@ -62,7 +62,7 @@
             "args": []
         }
     },
-	
+
     /*files*/
     "files.autoSave": "afterDelay",
     "files.exclude": {//隐藏一些碍眼的文件夹

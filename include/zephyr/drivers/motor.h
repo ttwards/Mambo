@@ -50,8 +50,7 @@ extern "C" {
 #define motor_set_mit(dev, _speed, _angle, _torque)                                                \
 	motor_set(dev, &(motor_status_t){                                                          \
 			       .rpm = _speed, .angle = _angle, .torque = _torque, .mode = MIT})
-#define motor_set_vo(dev, _speed)                                                               \
-	motor_set(dev, &(motor_status_t){.rpm = _speed, .mode = VO})
+#define motor_set_vo(dev, _speed) motor_set(dev, &(motor_status_t){.rpm = _speed, .mode = VO})
 #define motor_set_speed_limit(dev, _min, _max)                                                     \
 	motor_set(dev, &(motor_status_t){.speed_limit = {_min, _max}})
 #define motor_set_torque_limit(dev, _min, _max)                                                    \

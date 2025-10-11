@@ -18,7 +18,7 @@ config PID
     bool "PID"
     help
       Add support for PID
-   
+
 if PID_MUNU
 
 endif

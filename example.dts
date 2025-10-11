@@ -24,7 +24,7 @@
             anti-windup;
             low-pass-filter = "50"; // Hz
             min = "-3"; // Nm
-            max = "3"; 
+            max = "3";
         };
         steer_vel_param: steer_vel_param{
             kp = "1.0"; // dts does not support floating point, use string instead!
@@ -33,7 +33,7 @@
             anti-windup;
             low-pass-filter = "50"; // Hz
             min = "-3"; // Nm
-            max = "3"; 
+            max = "3";
         };
         steer_pos_param: steer_pos_param{
             kp = "1.0"; // dts does not support floating point, use string instead!
@@ -42,10 +42,10 @@
             anti-windup;
             low-pass-filter = "50"; // Hz
             min = "-3"; // Nm
-            max = "3"; 
+            max = "3";
         };
     };
-    
+
     controllers {
         drive_fr_pid: drive_fr_pid{
             compatible = "ares,pid-single";
@@ -116,4 +116,3 @@
         cmd-sub-zbus-chnl = "cmd_vel";
     };
 };
-

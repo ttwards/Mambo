@@ -11,4 +11,4 @@ include: [base.yaml]
 properties:
   can_device:
     type: phandle
-    required: true  
+    required: true

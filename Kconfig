@@ -7,4 +7,3 @@
 
 rsource "drivers/Kconfig"
 rsource "lib/Kconfig"
-

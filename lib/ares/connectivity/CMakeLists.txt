@@ -3,9 +3,6 @@
 
 zephyr_library()
 
-set(CONNECT_SOURCES
-	uart_trans.c
-	uart_async_adapter.c
-)
+set(CONNECT_SOURCES uart_trans.c uart_async_adapter.c)
 
 zephyr_library_sources(${CONNECT_SOURCES})

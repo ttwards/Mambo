@@ -38,4 +38,3 @@ CONFIG_MOTOR_INIT_PRIORITY=90
 
 ## boards
 详见../motor/devicetree.md
-

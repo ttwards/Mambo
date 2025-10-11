@@ -3,8 +3,6 @@
 
 zephyr_library()
 
-set(VOFA_SOURCES
-	justfloat.c
-)
+set(VOFA_SOURCES justfloat.c)
 
 zephyr_library_sources(${VOFA_SOURCES})

@@ -41,7 +41,7 @@ struct AresBulkInterface {
 		.name = #Interface_name,                                                           \
 		.api = &ares_bulk_interface_api,                                                   \
 		.protocol = NULL,                                                                  \
-		.priv_data = &Internal_##Interface_name,                                             \
+		.priv_data = &Internal_##Interface_name,                                           \
 	};
 
 #endif // ARES_USB_BULK_H__

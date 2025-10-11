@@ -394,7 +394,7 @@ void IMU_QuaternionEKF_Measurement_Update(float gx_raw, float gy_raw, float gz_r
 		1.0f / invSqrt(gx_for_F * gx_for_F + gy_for_F * gy_for_F + gz_for_F * gz_for_F);
 	QEKF_INS.accl_norm = 1.0f / accelInvNorm;
 
-	float acc_input[3] = {ax, ay, az}; // 使用原始加速度计读数判断稳定性
+	float acc_input[3] = {ax, ay, az};               // 使用原始加速度计读数判断稳定性
 	if (fabsf(NormOf3d(acc_input) - 9.8f) < 0.25f) { // 使用传入的原始ax,ay,az进行判断
 		QEKF_INS.StableFlag = 1;
 	} else {

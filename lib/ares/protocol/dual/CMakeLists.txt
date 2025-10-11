@@ -3,8 +3,6 @@
 
 zephyr_library()
 
-set(DUAL_PROTOCOL_SOURCES
-	dual_protocol.c
-)
+set(DUAL_PROTOCOL_SOURCES dual_protocol.c)
 
 zephyr_library_sources(${DUAL_PROTOCOL_SOURCES})

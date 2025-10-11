@@ -37,7 +37,7 @@ config IMU_PWM_TEMP_CTRL
     bool "IMU_PWM_TEMP_CTRL"
     help
       Enable IMU PWM TEMP CTRL
-	
+
 config AUTO_PROBE_GYRO_BIAS
 	bool "AUTO_PROBE_GYRO_BIAS"
 	help

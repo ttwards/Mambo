@@ -168,7 +168,7 @@
 			out_max = "3";
 		};
 	};
-	
+
 	sbus0: sbus0 {
 		compatible = "ares,sbus";
 		status = "okay";

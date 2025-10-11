@@ -3,8 +3,6 @@
 
 zephyr_library()
 
-set(INIT_SOURCES
-	init.c
-)
+set(INIT_SOURCES init.c)
 
 zephyr_library_sources(${INIT_SOURCES})

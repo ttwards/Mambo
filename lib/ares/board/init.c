@@ -177,15 +177,15 @@ void led_serivce_func(void *p1, void *p2, void *p3)
 		k_msleep(100);
 		k_thread_runtime_stats_all_get(&idle_stats_new);
 
-		#if CONFIG_SCHED_THREAD_USAGE_ALL
+#if CONFIG_SCHED_THREAD_USAGE_ALL
 		// 计算CPU使用率 (0-100)
 		idle_cycles_diff = idle_stats_new.idle_cycles - idle_stats_old.idle_cycles;
 		total_cycles_diff =
 			idle_stats_new.execution_cycles - idle_stats_old.execution_cycles;
 		float cpu_usage = 100.0f * (1.0f - ((float)idle_cycles_diff / total_cycles_diff));
-		#else
+#else
 		float cpu_usage = 0.2f;
-		#endif
+#endif
 
 		// // 映射到RGB值 (红色表示高负载，绿色表示低负载)
 		uint8_t red = (uint8_t)((cpu_usage / 100.0f) * 0xff);

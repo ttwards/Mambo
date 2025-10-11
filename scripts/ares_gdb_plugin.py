@@ -27,13 +27,13 @@ class PrintExpressionCommand(gdb.Command):
             self.gdbReqSymbol = "aresPlotData"
             reqStruct = gdb.parse_and_eval(self.gdbReqSymbol)
             fdata = reqStruct["fdata"]
-        
+
             # 获取数组类型信息
             array_type = fdata.type
             element_size = array_type.target().sizeof  # float大小
-            total_size = array_type.sizeof            # 总大小
+            total_size = array_type.sizeof  # 总大小
             self.reqArrayLen = total_size // element_size  # 数组长度
-            
+
             print("there are {} available plot lines".format(self.reqArrayLen))
             self.reqArray = reqStruct
         except gdb.error as e:
@@ -62,41 +62,41 @@ class PrintExpressionCommand(gdb.Command):
         try:
             # 获取结构体实例
             plot_data = self.reqArray
-            
+
             print("Struct get.")
-            
+
             # 获取当前channel值
             current_channel = int(plot_data["channel"])
             data_ptr_array = plot_data["data_ptr"]
             types_array = plot_data["types"]
-            
+
             print(f"current_channel: {current_channel}")
-            
+
             # 边界检查
             if current_channel >= self.reqArrayLen:
                 print("Error: Channel array is full")
                 return False
-                
+
             # 设置data_ptr[channel]
             p = data_ptr_array[current_channel].address
-            command = f'set {{unsigned long}} {int(p)} = {address}'
+            command = f"set {{unsigned long}} {int(p)} = {address}"
             print(command)
             gdb.execute(command)
-            
+
             # 设置types[channel]
             p = types_array[current_channel].address
-            command = f'set {{unsigned char}} {int(p)} = {self.parseType(type)}'
+            command = f"set {{unsigned char}} {int(p)} = {self.parseType(type)}"
             print(command)
             gdb.execute(command)
-            
+
             # 增加channel计数
             p = plot_data["channel"].address
-            command = f'set {{unsigned long}} {int(p)} = {current_channel + 1}'
+            command = f"set {{unsigned long}} {int(p)} = {current_channel + 1}"
             print(command)
             gdb.execute(command)
-            
+
             return True
-            
+
         except gdb.error as e:
             print(f"Error: {e}")
             return False
@@ -117,9 +117,7 @@ class PrintExpressionCommand(gdb.Command):
             print("Address: {}".format(hex(address)))
             print("Value: {}".format(value))
             print(
-                "Data Type: {} which is {}".format(
-                    data_type, self.parseType(data_type)
-                )
+                "Data Type: {} which is {}".format(data_type, self.parseType(data_type))
             )
             self.storeRequest(arg, address, data_type)
         except gdb.error as e:

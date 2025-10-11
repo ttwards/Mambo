@@ -154,14 +154,14 @@ struct dual_protocol_data {
 
 	uint8_t func_tx_bckup_cnt;
 	__aligned(4) uint8_t error_frame_buf[ERROR_FRAME_LENGTH + 2]; // +2 for potential CRC16
-	
+
 	// 状态机相关字段
 	enum parser_state state;
 	enum frame_type current_frame_type;
-	uint8_t rx_buffer[256];  // 接收缓冲区
-	uint16_t rx_buffer_pos;  // 当前接收位置
-	uint16_t expected_frame_length;  // 期望的帧长度
-	uint16_t header_value;           // 帧头值
+	uint8_t rx_buffer[256];         // 接收缓冲区
+	uint16_t rx_buffer_pos;         // 当前接收位置
+	uint16_t expected_frame_length; // 期望的帧长度
+	uint16_t header_value;          // 帧头值
 
 	bool crc_enabled;
 };
@@ -198,7 +198,7 @@ int dual_sync_flush(struct AresProtocol *protocol, sync_table_t *pack);
 		result;                                                                            \
 	})
 
-#define DUAL_PROPOSE_PROTOCOL_DEFINE(Protocol_name)                                   \
+#define DUAL_PROPOSE_PROTOCOL_DEFINE(Protocol_name)                                                \
 	struct AresProtocolAPI Protocol_name##_api = {                                             \
 		.handle = ares_dual_protocol_handle,                                               \
 		.handle_byte = ares_dual_protocol_handle_byte,                                     \
@@ -219,7 +219,7 @@ int dual_sync_flush(struct AresProtocol *protocol, sync_table_t *pack);
 		.rx_buffer_pos = 0,                                                                \
 		.expected_frame_length = 0,                                                        \
 		.header_value = 0,                                                                 \
-		.crc_enabled = false,                                                        \
+		.crc_enabled = false,                                                              \
 	};                                                                                         \
 	struct AresProtocol Protocol_name = {                                                      \
 		.name = #Protocol_name,                                                            \
@@ -227,7 +227,7 @@ int dual_sync_flush(struct AresProtocol *protocol, sync_table_t *pack);
 		.priv_data = &Protocol_name##_data,                                                \
 	};
 
-	#define DUAL_PROPOSE_PROTOCOL_DEFINE_CRC(Protocol_name)                                                \
+#define DUAL_PROPOSE_PROTOCOL_DEFINE_CRC(Protocol_name)                                            \
 	struct AresProtocolAPI Protocol_name##_api = {                                             \
 		.handle = ares_dual_protocol_handle,                                               \
 		.handle_byte = ares_dual_protocol_handle_byte,                                     \
@@ -248,12 +248,12 @@ int dual_sync_flush(struct AresProtocol *protocol, sync_table_t *pack);
 		.rx_buffer_pos = 0,                                                                \
 		.expected_frame_length = 0,                                                        \
 		.header_value = 0,                                                                 \
-		.crc_enabled = true,                                                        \
+		.crc_enabled = true,                                                               \
 	};                                                                                         \
 	struct AresProtocol Protocol_name = {                                                      \
 		.name = #Protocol_name,                                                            \
 		.api = &Protocol_name##_api,                                                       \
-		.priv_data = &Protocol_name##_data,                                               \
+		.priv_data = &Protocol_name##_data,                                                \
 	};
 
 #endif

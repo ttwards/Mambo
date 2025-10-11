@@ -48,4 +48,4 @@ config ARESPLOT_FREQ
 	  Sampling frequency in Hz.
 	  This is the frequency at which the protocol will sample the variables.
 
-endif # ARES_PLOTTER_PROTOCOL 
+endif # ARES_PLOTTER_PROTOCOL

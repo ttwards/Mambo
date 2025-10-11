@@ -28,8 +28,8 @@ typedef struct {
 //----------------------------------------------------------------------------------------------------
 // Variable declaration
 
-extern volatile float twoKp;			// 2 * proportional gain (Kp)
-extern volatile float twoKi;			// 2 * integral gain (Ki)
+extern volatile float twoKp;          // 2 * proportional gain (Kp)
+extern volatile float twoKi;          // 2 * integral gain (Ki)
 extern volatile float q0, q1, q2, q3; // quaternion of sensor frame relative to auxiliary frame
 
 extern MahonyAHRS_INS_t MahonyAHRS_INS;
@@ -37,8 +37,10 @@ extern MahonyAHRS_INS_t MahonyAHRS_INS;
 //---------------------------------------------------------------------------------------------------
 // Function declarations
 
-void MahonyAHRSupdate(float gx, float gy, float gz, float gyro_dt, float ax, float ay, float az, float mx, float my, float mz, float accel_dt);
-void MahonyAHRSupdateIMU(float gx, float gy, float gz, float gyro_dt, float ax, float ay, float az, float accel_dt);
+void MahonyAHRSupdate(float gx, float gy, float gz, float gyro_dt, float ax, float ay, float az,
+		      float mx, float my, float mz, float accel_dt);
+void MahonyAHRSupdateIMU(float gx, float gy, float gz, float gyro_dt, float ax, float ay, float az,
+			 float accel_dt);
 void MahonyAHRSupdateGyro(float gx, float gy, float gz, float gyro_dt);
 
 #endif

@@ -17,7 +17,7 @@
 1. **设置零点1**: 将当前位置设为零点
 2. **速度测试**: 以100 RPM恒定速度转动10秒
 3. **停止**: 停止电机运行2秒
-4. **设置零点2**: 重新将当前位置设为零点  
+4. **设置零点2**: 重新将当前位置设为零点
 5. **角度测试**: 正转180度
 6. **循环**: 回到步骤1继续循环
 
@@ -46,7 +46,7 @@ GND           -> GND
 
 ### 速度环PID
 - Kp: 8.00
-- Ki: 0.50  
+- Ki: 0.50
 - Kd: 0.10
 - 输出限制: ±16384 (电流值)
 - 积分限制: ±5000
@@ -150,4 +150,4 @@ west flash
 
 - [DJI M3508电机手册](https://www.dji.com/cn/robomaster-s1/info#specs)
 - [Zephyr电机驱动API](https://docs.zephyrproject.org/latest/hardware/peripherals/motor.html)
-- [CAN总线配置指南](https://docs.zephyrproject.org/latest/connectivity/networking/api/can.html) 
+- [CAN总线配置指南](https://docs.zephyrproject.org/latest/connectivity/networking/api/can.html)

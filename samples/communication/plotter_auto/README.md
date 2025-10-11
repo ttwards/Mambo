@@ -34,7 +34,7 @@ west flash
 ## 监控的变量
 
 - `sine_wave`: 正弦波值 (float)
-- `counter`: 递增计数器 (int32_t) 
+- `counter`: 递增计数器 (int32_t)
 - `random_value`: 随机值 (int32_t)
 - `toggle_flag`: 布尔标志 (bool)
 
@@ -54,4 +54,4 @@ west flash
 2. **接口抽象**: 支持任何 Ares 接口（UART、USB 等）
 3. **更好的错误处理**: 标准化的错误码和处理
 4. **线程安全**: 使用互斥锁保护共享数据
-5. **定时器驱动**: 使用 Zephyr 内核定时器 
+5. **定时器驱动**: 使用 Zephyr 内核定时器

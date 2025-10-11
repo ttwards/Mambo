@@ -9,10 +9,10 @@ motor_driver_api {
 ```c
 /**
  * @brief 电机工作模式
- * 
+ *
  * MIT: MIT模式
  * PV: 位置-速度控制
- * VO: 速度控制  
+ * VO: 速度控制
  * ML_TORQUE: 多环扭矩控制
  * ML_ANGLE: 多环角度控制
  * ML_SPEED: 多环速度控制

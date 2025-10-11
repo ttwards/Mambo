@@ -343,7 +343,7 @@ void dm_rx_data_handler(struct k_work *work)
 
 		float prev_angle = data->common.angle;
 		data->common.angle =
-			(uint_to_float(data->RAWangle, -cfg->p_max, cfg->p_max, 16)) * RAD2DEG;
+			(uint_to_float(data->RAWangle, -cfg->p_max, cfg->p_max, 16))*RAD2DEG;
 		data->common.rpm =
 			RADPS2RPM(uint_to_float(data->RAWrpm, -cfg->v_max, cfg->v_max, 12));
 		data->common.torque = uint_to_float(data->RAWtorque, -cfg->t_max, cfg->t_max, 12);

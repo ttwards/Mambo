@@ -31,7 +31,7 @@ typedef struct {
 	float AccelBeta[3];
 	float GyroBias[3];
 	float GyroBeta[3];
-	
+
 	float MagBias[3];
 	float MagBeta[3];
 
@@ -75,7 +75,8 @@ void IMU_Sensor_set_update_cb(update_cb_t cb);
 #ifdef CONFIG_IMU_PWM_TEMP_CTRL
 void IMU_Sensor_set_IMU_temp(float temp);
 #endif // CONFIG_IMU_PWM_TEMP_CTRL
-void IMU_Sensor_trig_init(const struct device *accel_dev, const struct device *gyro_dev, const struct device *mag_dev);
+void IMU_Sensor_trig_init(const struct device *accel_dev, const struct device *gyro_dev,
+			  const struct device *mag_dev);
 
 #define MIN_PERIOD PWM_SEC(1U) / 128U
 #define MAX_PERIOD PWM_SEC(1U)
