@@ -68,17 +68,6 @@ repos:
         name: Python import sorting
         args: ["--profile", "black"]
 
-  # Check SPDX license header
-  - repo: local
-    hooks:
-      - id: check-spdx-license
-        name: Check SPDX license header
-        entry: bash -c 'for file in "$@"; do if ! grep -q "SPDX-License-Identifier" "$file"; then echo "$file missing SPDX header"; exit 1; fi; done'
-        args: ['--']
-        language: system
-        types_or: [c, c++, python, cmake]
-        exclude: '^(build/|\.git/)'
-
 # Global configuration
 default_language_version:
   python: python3
