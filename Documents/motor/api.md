@@ -45,12 +45,14 @@ motor_status_t {
 ```
 
 ## 电机状态获取
+
 `motor_get(const struct device *dev, motor_status_t *status)`: 获取电机当前状态，参数为电机状态结构体。
 `motor_set(const struct device *dev, motor_status_t *status)`: 设置电机目标状态，参数为电机状态结构体。
 `motor_control(const struct device *dev, enum motor_cmd cmd)`: 控制电机，参数为控制命令。
 
 ## 示例
-设置电机为多环扭矩控制模式，并设置目标扭矩为10N*m。
+
+设置电机为多环-扭矩控制模式，并设置目标扭矩为10N*m。
 
 ```c
 motor_status_t status;
