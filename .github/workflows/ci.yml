@@ -53,7 +53,7 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
-          path: motor
+          path: mambo
 
       - name: 安装系统依赖
         run: |
@@ -69,37 +69,33 @@ jobs:
           pip install --upgrade pip
           pip install west
 
-      - name: 初始化 West 工作空间
-        run: |
-          cd motor
-          west init -l .
-          west update
-          west zephyr-export
-          pip install -r ../zephyr/scripts/requirements.txt
-
-      - name: 下载 Zephyr SDK
-        run: |
-          cd ~
-          wget -q https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.8/zephyr-sdk-0.16.8_linux-x86_64.tar.xz
-          tar xf zephyr-sdk-0.16.8_linux-x86_64.tar.xz
-          cd zephyr-sdk-0.16.8
-          ./setup.sh -t arm-zephyr-eabi -h -c
-
       - name: 设置缓存
         uses: actions/cache@v4
         with:
           path: |
             ~/.cache/ccache
-            ~/zephyr-sdk-0.16.8
-          key: ${{ runner.os }}-zephyr-sdk-${{ hashFiles('motor/west.yml') }}
+            ~/.local/share/zephyr-sdk
+          key: ${{ runner.os }}-zephyr-sdk-${{ hashFiles('mambo/west.yml') }}
           restore-keys: |
             ${{ runner.os }}-zephyr-sdk-
 
+      - name: 初始化 West 工作空间
+        run: |
+          west init -l mambo
+          west update
+
+      - name: 导出 Zephyr 环境
+        run: |
+          west zephyr-export
+          pip install -r zephyr/scripts/requirements.txt
+
+      - name: 安装 Zephyr SDK
+        run: |
+          west sdk install
+
       - name: 编译示例程序 - ${{ matrix.sample }} for ${{ matrix.board }}
         run: |
-          cd motor
-          export ZEPHYR_SDK_INSTALL_DIR=~/zephyr-sdk-0.16.8
-          west build -b ${{ matrix.board }} ${{ matrix.sample }} --pristine
+          west build -b ${{ matrix.board }} motor/${{ matrix.sample }} --pristine
 
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
@@ -107,9 +103,9 @@ jobs:
         with:
           name: build-${{ matrix.board }}-${{ matrix.sample }}
           path: |
-            motor/build/zephyr/zephyr.elf
-            motor/build/zephyr/zephyr.bin
-            motor/build/zephyr/zephyr.hex
+            build/zephyr/zephyr.elf
+            build/zephyr/zephyr.bin
+            build/zephyr/zephyr.hex
           retention-days: 7
 
   # 静态代码分析
