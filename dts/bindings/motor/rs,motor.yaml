@@ -1,0 +1,22 @@
+description: Robstride Motor
+
+compatible: "rs,motor"
+
+include: [base.yaml]
+
+properties:
+  motor_id:
+    type: int
+    required: true
+  master_id:
+    type: int
+    required: true
+  can_channel:
+    type: phandle
+    required: true
+  controllers:
+    type: phandles
+    required: true
+  capabilities:
+    type: string-array
+    required: true
