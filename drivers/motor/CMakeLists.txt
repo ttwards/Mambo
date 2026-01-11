@@ -5,6 +5,8 @@ add_subdirectory_ifdef(CONFIG_MOTOR_DJI dji)
 
 add_subdirectory_ifdef(CONFIG_MOTOR_MI mi)
 
+add_subdirectory_ifdef(CONFIG_MOTOR_LK lk)
+
 add_subdirectory_ifdef(CONFIG_MOTOR_DM dm)
 
 add_subdirectory_ifdef(CONFIG_MOTOR_COMMON common)
