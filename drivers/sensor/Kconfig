@@ -1,6 +1,7 @@
 # Copyright (c) 2024 ttwards <12411711@mail.sustech.edu.cn>
 # SPDX-License-Identifier: Apache-2.0
 
-menu "Device Drivers"
+menu "Device Drivers" 
 rsource "paw3395/Kconfig"
+rsource "WIT_HWT906/Kconfig"
 endmenu
