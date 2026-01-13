@@ -1,0 +1,523 @@
+#include "motor_lk.h"
+#include "zephyr/device.h"
+#include "zephyr/drivers/can.h"
+#include "../common/common.h"
+#include "zephyr/drivers/motor.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+
+#define DT_DRV_COMPAT lk_motor
+
+LOG_MODULE_REGISTER(motor_lk, CONFIG_MOTOR_LOG_LEVEL);
+
+struct k_sem tx_frame_sem;
+
+// 辅助函数：限制范围
+static int32_t clip_int32(int32_t val, int32_t min, int32_t max)
+{
+	if (val > max)
+		return max;
+	if (val < min)
+		return min;
+	return val;
+}
+int float_to_int(float x, float x_min, float x_max, int bits)
+{
+	// 1. 限制输入范围 (Clamp Input)
+	if (x > x_max) {
+		x = x_max;
+	} else if (x < x_min) {
+		x = x_min;
+	}
+
+	// 2. 计算输入范围的跨度 (Source Span)
+	float x_span = x_max - x_min;
+
+	// 3. 计算目标 int 范围 (Target Range)
+	// 举例 bits=12:
+	// target_min = -2048
+	// target_max =  2047
+	int target_min = -(1 << (bits - 1));
+	int target_max = (1 << (bits - 1)) - 1;
+
+	// 4. 计算目标范围的跨度 (Target Span)
+	// 注意转为 float 防止计算溢出
+	float target_span = (float)(target_max - target_min);
+
+	// 5. 执行线性映射
+	// 公式: y = (x - x_min) / x_span * target_span + target_min
+	// 含义: (归一化比率) * (目标总跨度) + (目标起始点)
+	return (int)((x - x_min) / x_span * target_span + (float)target_min);
+}
+
+int lk_init(const struct device *dev)
+{
+	LOG_DBG("lk_init");
+	const struct lk_motor_cfg *cfg = dev->config;
+	if (!device_is_ready(cfg->common.phy)) {
+		LOG_ERR("CAN device not ready");
+		return -1;
+	}
+	if (k_work_busy_get(&lk_init_work) != 0) {
+		return 0;
+	}
+	k_work_queue_init(&lk_work_queue);
+	k_work_queue_start(&lk_work_queue, lk_work_queue_stack, CAN_SEND_STACK_SIZE,
+			   CAN_SEND_PRIORITY, NULL);
+	k_work_submit_to_queue(&lk_work_queue, &lk_init_work);
+
+	return 0;
+}
+
+void lk_motor_control(const struct device *dev, enum motor_cmd cmd)
+{
+	struct lk_motor_data *data = dev->data;
+	const struct lk_motor_cfg *cfg = dev->config;
+
+	struct can_frame frame = {0};
+	frame.flags = 0;
+	frame.dlc = 8;
+	// for (int i = 0; i < 33; i++) {
+
+	frame.id = LK_CMD_ID_BASE + cfg->id; // 0x140 + ID
+	// frame.id = LK_CMD_ID_BASE + i;
+	switch (cmd) {
+	case ENABLE_MOTOR:
+		frame.data[0] = LK_CMD_MOTOR_RUN; // 0x88
+		can_send_queued(cfg->common.phy, &frame);
+		k_msleep(10);
+		data->online = true;
+		data->enabled = true;
+		break;
+	case DISABLE_MOTOR:
+		frame.data[0] = LK_CMD_MOTOR_OFF; // 0x80
+		can_send_queued(cfg->common.phy, &frame);
+		data->online = false;
+		data->enabled = false;
+		break;
+	case SET_ZERO:
+		// 设置当前位置为零点 (写入ROM，需谨慎)
+		// frame.data[0] = LK_CMD_SET_ZERO_ROM;
+		// can_send_queued(cfg->common.phy, &frame);
+
+		// 设置当前位置为零点
+		frame.data[0] = LK_CMD_SET_ZERO; // 0x95
+		float set_angle = 0.0f;
+		frame.data[4] = ((uint32_t)(set_angle * LK_POS_FACTOR)) & 0xFF;
+		frame.data[5] = (((uint32_t)(set_angle * LK_POS_FACTOR)) >> 8) & 0xFF;
+		frame.data[6] = (((uint32_t)(set_angle * LK_POS_FACTOR)) >> 16) & 0xFF;
+		frame.data[7] = (((uint32_t)(set_angle * LK_POS_FACTOR)) >> 24) & 0xFF;
+		can_send_queued(cfg->common.phy, &frame);
+		break;
+	case CLEAR_ERROR:
+		frame.data[0] = LK_CMD_CLEAR_ERR; // 0x9B
+		can_send_queued(cfg->common.phy, &frame);
+		break;
+	default:
+		LOG_ERR("Unsupport motor command: %d", cmd);
+		return;
+	}
+	// }
+}
+
+// 核心打包函数：根据模式生成不同的控制指令
+static void lk_motor_pack(const struct device *dev, struct can_frame *frame)
+{
+	struct lk_motor_data *data = (struct lk_motor_data *)(dev->data);
+	const struct lk_motor_cfg *cfg = (struct lk_motor_cfg *)(dev->config);
+
+	frame->id = LK_CMD_ID_BASE + cfg->id; // 标准ID: 0x140 + ID
+	frame->dlc = 8;
+	frame->flags = 0; // 标准帧
+
+	int32_t val_i32;
+	int16_t val_i16;
+
+	switch (data->common.mode) {
+	case ML_TORQUE: // 转矩闭环 0xA1
+		frame->data[0] = LK_CMD_TORQUE_LOOP;
+		frame->data[1] = 0x00;
+		frame->data[2] = 0x00;
+		frame->data[3] = 0x00;
+
+		// iqControl (-2048 ~ 2048)
+		val_i16 = (int16_t)float_to_int(data->limit_torque, 0, 12, 12);
+		frame->data[4] = val_i16 & 0xFF;
+		frame->data[5] = (val_i16 >> 8) & 0xFF;
+		frame->data[6] = 0x00;
+		frame->data[7] = 0x00;
+		break;
+
+	case ML_SPEED: // 速度闭环 0xA2
+		frame->data[0] = LK_CMD_SPEED_LOOP;
+		frame->data[1] = 0x00;
+
+		// 力矩限制 (iqControl)
+		val_i16 = (int16_t)float_to_int(data->limit_torque, 0, 12, 12);
+		frame->data[2] = val_i16 & 0xFF;
+		frame->data[3] = (val_i16 >> 8) & 0xFF;
+
+		// 速度控制 (0.01 dps/LSB)
+		val_i32 = (int32_t)(data->target_speed * LK_SPD_FACTOR_FINE);
+		frame->data[4] = val_i32 & 0xFF;
+		frame->data[5] = (val_i32 >> 8) & 0xFF;
+		frame->data[6] = (val_i32 >> 16) & 0xFF;
+		frame->data[7] = (val_i32 >> 24) & 0xFF;
+		break;
+
+	case ML_ANGLE: // 多圈位置闭环2 0xA4
+		frame->data[0] = LK_CMD_POS_LOOP_MULTI;
+		frame->data[1] = 0x00;
+
+		// 速度限制 (1 dps/LSB)
+		val_i16 = (int16_t)data->limit_speed;
+		frame->data[2] = val_i16 & 0xFF;
+		frame->data[3] = (val_i16 >> 8) & 0xFF;
+
+		// 位置控制 (0.01 degree/LSB)
+		val_i32 = (int32_t)(data->target_pos * LK_POS_FACTOR);
+		frame->data[4] = val_i32 & 0xFF;
+		frame->data[5] = (val_i32 >> 8) & 0xFF;
+		frame->data[6] = (val_i32 >> 16) & 0xFF;
+		frame->data[7] = (val_i32 >> 24) & 0xFF;
+		break;
+
+	default:
+
+		frame->data[0] = LK_CMD_READ_STAT;
+		break;
+	}
+}
+
+int lk_set(const struct device *dev, motor_status_t *status)
+{
+	struct lk_motor_data *data = dev->data;
+	const struct lk_motor_cfg *cfg = dev->config;
+
+	switch (status->mode) {
+	case ML_ANGLE:
+		data->common.mode = ML_ANGLE;
+		data->target_pos = status->angle;
+		data->limit_speed = fabsf(status->speed_limit[0] * 6.0f); // RPM -> dps
+
+		break;
+
+	case ML_SPEED:
+		data->common.mode = ML_SPEED;
+		data->target_speed = status->rpm * 6.0f;
+
+		data->limit_torque = fabsf(status->torque_limit[0]);
+		break;
+
+	case ML_TORQUE:
+		data->common.mode = ML_TORQUE;
+		data->target_torque = status->torque;
+		break;
+
+	default:
+		return -ENOSYS;
+	}
+	for (int i = 0; i < SIZE_OF_ARRAY(cfg->common.capabilities); i++) {
+
+		if (cfg->common.pid_datas[i]->pid_dev == NULL) {
+			break;
+		}
+
+		const char *cap_name = cfg->common.capabilities[i];
+		int pid_idx = -1;
+
+		// 0->Angle, 1->Speed, 2->Torque
+		if (strcmp(cap_name, "angle") == 0) {
+			pid_idx = 0;
+		} else if (strcmp(cap_name, "speed") == 0) {
+			pid_idx = 1;
+		} else if (strcmp(cap_name, "torque") == 0 || strcmp(cap_name, "torgue") == 0) {
+
+			pid_idx = 2;
+		}
+
+		if (pid_idx != -1) {
+			struct pid_config params;
+			pid_get_params(cfg->common.pid_datas[i], &params);
+
+			if (data->params[pid_idx].k_p != params.k_p ||
+			    data->params[pid_idx].k_d != params.k_d) {
+
+				data->params[pid_idx].k_p = params.k_p;
+				data->params[pid_idx].k_d = params.k_d;
+
+				data->pidupdate[pid_idx] = true;
+				k_work_submit_to_queue(&lk_work_queue, &lk_txpid_data_handle);
+			}
+		}
+	}
+
+	return 0;
+}
+
+// 获取电机ID辅助函数
+static int get_motor_id(struct can_frame *frame)
+{
+	// LK协议回复帧ID: 0x180 + ID
+	int id_val = frame->id - LK_CMD_ID_BASE;
+
+	for (int i = 0; i < MOTOR_COUNT; i++) {
+		const struct device *dev = motor_devices[i];
+		const struct lk_motor_cfg *cfg = (const struct lk_motor_cfg *)(dev->config);
+		if (cfg->id == id_val) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+static struct can_filter filters[MOTOR_COUNT];
+
+// CAN 接收中断处理
+static void lk_can_rx_handler(const struct device *can_dev, struct can_frame *frame,
+			      void *user_data)
+{
+	int idx = get_motor_id(frame);
+	if (idx == -1) {
+		return; // 不是配置中的电机
+	}
+
+	struct lk_motor_data *data = (struct lk_motor_data *)(motor_devices[idx]->data);
+
+	if (data->missed_times > 0) {
+		data->missed_times = 0;
+	}
+
+	// 解析回复数据
+	// 无论是控制命令(0xA1..A4)还是读取命令(0x9C)，回复格式通常一致(参考读取状态2)
+	// Data[0]: 命令字节
+	// Data[1]: 温度
+	// Data[2-3]: 转矩电流/功率
+	// Data[4-5]: 速度
+	// Data[6-7]: 编码器位置
+	// if(frame->data[0]==0x9C){
+	data->RAWtemp = (int8_t)frame->data[1];
+	data->RAWtorque = (int16_t)(frame->data[2] | (frame->data[3] << 8));
+	data->RAWspeed = (int16_t)(frame->data[4] | (frame->data[5] << 8));
+	data->RAWencoder = (uint16_t)(frame->data[6] | (frame->data[7] << 8));
+
+	data->update = true;
+
+	k_work_submit_to_queue(&lk_work_queue, &lk_rx_data_handle);
+	// } else if (frame->data[0] == 0x9A) {
+	for (int i = 0; i < 8; i++) {
+		if (frame->data[7] >> i & 0x01) {
+			LOG_DBG("Motor %d Error Bit %d", idx, i);
+		}
+	}
+
+	// }
+}
+
+void lk_rx_data_handler(struct k_work *work)
+{
+	for (int i = 0; i < MOTOR_COUNT; i++) {
+		struct lk_motor_data *data = (struct lk_motor_data *)(motor_devices[i]->data);
+		if (!data->update) {
+			continue;
+		}
+		data->common.temperature = (float)data->RAWtemp; // 1 degC/LSB [cite: 77]
+		data->common.torque =
+			(float)data->RAWtorque * (16.0f / 4096.0f); // 33Nm满量程，12bit ADC
+		// 速度转换: 1 dps/LSB -> RPM
+		data->common.rpm = ((float)data->RAWspeed) / 6.0f;
+		data->common.angle = (float)data->RAWencoder * (360.0f / 65535.0f);
+		data->update = false;
+	}
+}
+
+void lk_tx_isr_handler(struct k_timer *dummy)
+{
+	k_work_submit_to_queue(&lk_work_queue, &lk_tx_data_handle);
+}
+
+// 发送处理线程
+void lk_tx_data_handler(struct k_work *work)
+{
+	struct can_frame tx_frame = {0};
+
+	for (int i = 0; i < MOTOR_COUNT; i++) {
+		struct lk_motor_data *data = motor_devices[i]->data;
+		const struct lk_motor_cfg *cfg = motor_devices[i]->config;
+
+		if (data->enabled) {
+			if (data->missed_times > 600) {
+				LOG_ERR("Motor %d timeout", cfg->id);
+				data->missed_times = 0;
+				// 可选择重连逻辑
+			}
+
+			lk_motor_pack(motor_devices[i], &tx_frame);
+			can_send_queued(cfg->common.phy, &tx_frame);
+
+			data->missed_times++;
+		}
+		// if (i % 2 == 1) {
+		//     k_usleep(500);
+		// }
+	}
+}
+void lk_txpid_data_handler(struct k_work *work)
+{
+	struct can_frame tx_frame = {0};
+	k_msleep(1000);
+	for (int i = 0; i < MOTOR_COUNT; i++) {
+		struct lk_motor_data *data = motor_devices[i]->data;
+		const struct lk_motor_cfg *cfg = motor_devices[i]->config;
+		if (data->pidupdate[0] || data->pidupdate[1] || data->pidupdate[2]) {
+			tx_frame.id = LK_CMD_ID_BASE + cfg->id; // 0x160 + ID
+			tx_frame.dlc = 8;
+			tx_frame.flags = 0; // 标准帧
+
+			// 优先更新角度PID，其次速度PID，最后转矩PID
+			if (data->pidupdate[0]) {
+				tx_frame.data[0] = LK_SET_PARAM;
+				tx_frame.data[1] = LK_PID_ANGLE_UPDATE;
+				data->pidupdate[0] = false;
+
+				// Kp
+				int16_t kp_val = (int16_t)(data->params[0].k_p);
+				tx_frame.data[2] = kp_val & 0xFF;
+				tx_frame.data[3] = (kp_val >> 8) & 0xFF;
+
+				// Kd
+				int16_t ki_val = (int16_t)(data->params[0].k_i);
+				tx_frame.data[4] = ki_val & 0xFF;
+				tx_frame.data[5] = (ki_val >> 8) & 0xFF;
+				int16_t kd_val = (int16_t)(data->params[0].k_d);
+				tx_frame.data[6] = kd_val & 0xFF;
+				tx_frame.data[7] = (kd_val >> 8) & 0xFF;
+				can_send_queued(cfg->common.phy, &tx_frame);
+			}
+			k_sleep(K_USEC(120));
+			if (data->pidupdate[1]) {
+				tx_frame.data[0] = LK_SET_PARAM;
+				tx_frame.data[1] = LK_PID_SPEED_UPDATE;
+				data->pidupdate[0] = false;
+
+				// Kp
+				int16_t kp_val = (int16_t)(data->params[1].k_p);
+				tx_frame.data[2] = kp_val & 0xFF;
+				tx_frame.data[3] = (kp_val >> 8) & 0xFF;
+
+				// Kd
+				int16_t ki_val = (int16_t)(data->params[1].k_i);
+				tx_frame.data[4] = ki_val & 0xFF;
+				tx_frame.data[5] = (ki_val >> 8) & 0xFF;
+				int16_t kd_val = (int16_t)(data->params[1].k_d);
+				tx_frame.data[6] = kd_val & 0xFF;
+				tx_frame.data[7] = (kd_val >> 8) & 0xFF;
+				can_send_queued(cfg->common.phy, &tx_frame);
+			}
+			k_sleep(K_USEC(120));
+			if (data->pidupdate[2]) {
+				tx_frame.data[0] = LK_SET_PARAM;
+				tx_frame.data[1] = LK_PID_TORQUE_UPDATE;
+				data->pidupdate[0] = false;
+
+				// Kp
+				int16_t kp_val = (int16_t)(data->params[2].k_p);
+				tx_frame.data[2] = kp_val & 0xFF;
+				tx_frame.data[3] = (kp_val >> 8) & 0xFF;
+
+				// Kd
+				int16_t ki_val = (int16_t)(data->params[2].k_i);
+				tx_frame.data[4] = ki_val & 0xFF;
+				tx_frame.data[5] = (ki_val >> 8) & 0xFF;
+				int16_t kd_val = (int16_t)(data->params[2].k_d);
+				tx_frame.data[6] = kd_val & 0xFF;
+				tx_frame.data[7] = (kd_val >> 8) & 0xFF;
+				can_send_queued(cfg->common.phy, &tx_frame);
+			}
+			k_sleep(K_USEC(120));
+		}
+	}
+}
+void lk_init_handler(struct k_work *work)
+{
+	LOG_DBG("lk_init_handler");
+
+	for (int i = 0; i < MOTOR_COUNT; i++) {
+
+		const struct lk_motor_cfg *cfg =
+			(const struct lk_motor_cfg *)(motor_devices[i]->config);
+		struct lk_motor_data *data = motor_devices[i]->data;
+		reg_can_dev(cfg->common.phy);
+		data->pidupdate[0] = true;
+		data->pidupdate[1] = true;
+		data->pidupdate[2] = true;
+		// 注册 CAN 滤波器
+		// 接收 ID = 0x180 + ID
+		filters[i].flags = 0; // 标准帧
+		filters[i].id = LK_CMD_ID_BASE + cfg->id;
+		filters[i].mask = CAN_STD_ID_MASK; // 精确匹配
+						   // filters[i].id = 0x00000000;
+						   // filters[i].mask = 0x00000000;
+
+		int err = can_add_rx_filter(cfg->common.phy, lk_can_rx_handler, 0, &filters[i]);
+		if (err < 0) {
+			LOG_ERR("Error adding CAN filter (err %d)", err);
+		}
+		for (int i = 0; i < SIZE_OF_ARRAY(cfg->common.capabilities); i++) {
+
+			if (cfg->common.pid_datas[i]->pid_dev == NULL) {
+				break;
+			}
+
+			const char *cap_name = cfg->common.capabilities[i];
+			int pid_idx = -1;
+
+			// 0->Angle, 1->Speed, 2->Torque
+			if (strcmp(cap_name, "angle") == 0) {
+				pid_idx = 0;
+			} else if (strcmp(cap_name, "speed") == 0) {
+				pid_idx = 1;
+			} else if (strcmp(cap_name, "torque") == 0 ||
+				   strcmp(cap_name, "torgue") == 0) {
+
+				pid_idx = 2;
+			}
+
+			if (pid_idx != -1) {
+				struct pid_config params;
+				pid_get_params(cfg->common.pid_datas[i], &params);
+
+				if (data->params[pid_idx].k_p != params.k_p ||
+				    data->params[pid_idx].k_d != params.k_d) {
+
+					data->params[pid_idx].k_p = params.k_p;
+					data->params[pid_idx].k_d = params.k_d;
+
+					data->pidupdate[pid_idx] = true;
+				}
+			}
+		}
+		// lk_motor_control(motor_devices[i], ENABLE_MOTOR);
+		// k_sleep(K_USEC(120));
+		// lk_motor_control(motor_devices[i], SET_ZERO);
+	}
+	k_work_submit_to_queue(&lk_work_queue, &lk_txpid_data_handle);
+	lk_tx_timer.expiry_fn = lk_tx_isr_handler;
+	k_timer_start(&lk_tx_timer, K_MSEC(600), K_MSEC(300));
+	k_timer_user_data_set(&lk_tx_timer, &lk_tx_data_handle);
+}
+
+int lk_get(const struct device *dev, motor_status_t *status)
+{
+	struct lk_motor_data *data = dev->data;
+	status->angle = data->common.angle;
+	status->rpm = data->common.rpm;
+	status->torque = data->common.torque;
+	status->temperature = data->common.temperature;
+	return 0;
+}
+
+DT_INST_FOREACH_STATUS_OKAY(LKMOTOR_INST)
