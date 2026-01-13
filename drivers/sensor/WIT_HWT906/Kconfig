@@ -1,0 +1,24 @@
+menuconfig WIT_HWT906
+    bool "WIT HWT906 IMU Driver"
+    depends on SENSOR
+    depends on SERIAL
+    select UART_INTERRUPT_DRIVEN
+    help
+      Enable driver for WIT HWT906 9-axis IMU sensor.
+      The sensor communicates via UART.
+
+if WIT_HWT906
+
+config WIT_HWT906_THREAD_STACK_SIZE
+    int "Thread stack size"
+    default 1024
+    help
+      Stack size for the internal data processing thread.
+
+config WIT_HWT906_THREAD_PRIORITY
+    int "Thread priority"
+    default 5
+    help
+      Priority for the internal data processing thread.
+
+endif # WIT_HWT906

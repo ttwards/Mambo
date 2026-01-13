@@ -1,0 +1,9 @@
+description: WIT HWT906 9-axis IMU sensor
+
+compatible: "wit,hwt906"
+
+include: sensor-device.yaml
+
+bus: uart
+
+properties: {}
