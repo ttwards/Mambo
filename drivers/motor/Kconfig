@@ -41,6 +41,19 @@ config MOTOR_MI
     select PID
     select MOTOR_COMMON
 
+config MOTOR_RS
+    bool "MOTOR RS"
+    help
+      Add support for rs motors
+    select PID
+    select MOTOR_COMMON
+
+config MOTOR_VESC
+    bool "MOTOR VESC"
+    help
+      Add support for vesc motors
+    select MOTOR_COMMON
+
 config MOTOR_LK
     bool "MOTOR LK"
     help

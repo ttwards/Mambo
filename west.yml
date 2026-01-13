@@ -8,7 +8,7 @@ manifest:
 
   remotes:
     - name: zephyrproject-rtos
-      url-base: https://mirrors.sustech.edu.cn/git/12411711
+      url-base: https://www.github.com/zephyrproject-rtos
 
   projects:
     - name: zephyr

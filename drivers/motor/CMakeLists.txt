@@ -9,4 +9,8 @@ add_subdirectory_ifdef(CONFIG_MOTOR_LK lk)
 
 add_subdirectory_ifdef(CONFIG_MOTOR_DM dm)
 
+add_subdirectory_ifdef(CONFIG_MOTOR_RS robstride)
+
+add_subdirectory_ifdef(CONFIG_MOTOR_VESC vesc)
+
 add_subdirectory_ifdef(CONFIG_MOTOR_COMMON common)

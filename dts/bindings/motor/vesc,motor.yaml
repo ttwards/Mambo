@@ -1,0 +1,41 @@
+# Copyright (c) 2026 EclipseaHime017 <12210226@mail.sustech.edu.cn>
+
+# SPDX-License-Identifier: Apache-2.0
+
+description: VESC Motor
+
+compatible: "vesc,motor"
+
+include: [base.yaml]
+
+properties:
+  id:
+    type: int
+    required: true
+  can_channel:
+    type: phandle
+    required: true
+  gear_ratio:
+    type: string
+    required: true
+  capabilities:
+    type: string-array
+    required: true
+  kv:
+    type: string
+    required: true
+  pole_pairs:
+    type: string
+    required: true
+  v_max:
+    type: string
+    required: true
+  p_max:
+    type: string
+    required: true
+  t_max:
+    type: string
+    required: true
+  i_max:
+    type: string
+    required: true
