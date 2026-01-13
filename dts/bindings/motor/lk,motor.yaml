@@ -1,0 +1,24 @@
+description: Ling Kong Motor
+
+compatible: "lk,motor"
+
+include: [base.yaml]
+
+properties:
+  id:
+    type: int
+  tx_id:
+    type: int
+    required: true
+  rx_id:
+    type: int
+    required: true
+  can_channel:
+    type: phandle
+    required: true
+  controllers:
+    type: phandles
+    required: true
+  capabilities:
+    type: string-array
+    required: true

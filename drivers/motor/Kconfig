@@ -54,6 +54,13 @@ config MOTOR_VESC
       Add support for vesc motors
     select MOTOR_COMMON
 
+config MOTOR_LK
+    bool "MOTOR LK"
+    help
+      Add support for lk motors
+    select PID
+    select MOTOR_COMMON
+
 config MOTOR_LOG_LEVEL
     int "Motor log level"
     default 4

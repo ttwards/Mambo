@@ -61,17 +61,20 @@ int main(void)
 	// 启用电机
 	motor_control(dm_motor, ENABLE_MOTOR);
 	LOG_INF("电机已启用");
-
+	motor_set_mode(dm_motor, VO);
 	// 等待电机初始化完成
 	k_msleep(1000);
 
 	// 设置电机转速为100 RPM
-	motor_set_speed(dm_motor, 100.0f);
+	motor_set_vo(dm_motor, 100.0f);
+	k_msleep(500);
+	motor_set_vo(dm_motor, 200.0f);
 	LOG_INF("电机转速已设置为100 RPM");
 
 	// 主循环 - 保持程序运行
 	while (1) {
 		k_msleep(1000);
+		// motor_set_speed(dm_motor, 200.0f);
 	}
 
 	return 0;
