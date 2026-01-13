@@ -1,0 +1,31 @@
+/{
+    motor {
+        rs_motor: rs_motor {
+            compatible = "rs,motor";
+            id = <1>;
+            tx_id = <0x7F>;
+            rx_id = <0xFD>;
+            motor_type = "RS02";
+            status = "okay";
+            can_channel = <&can1>;
+            controllers = <&mit_pid_1>;
+            capabilities = "mit";   
+            p_max = "12.57f";
+            v_max = "44.0f";
+            t_max = "17.0f";                                 
+        };
+
+    };
+
+    pid {
+		mit_pid_1: mit_pid_1 {
+			#controller-cells = <0>;
+			compatible = "pid,single";
+			k_p = "20";
+			k_i = "0.0";
+			k_d = "1.0";
+		};
+
+    };
+
+};

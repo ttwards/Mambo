@@ -5,11 +5,17 @@ compatible: "rs,motor"
 include: [base.yaml]
 
 properties:
-  motor_id:
+  id:
     type: int
     required: true
-  master_id:
+  rx_id:
     type: int
+    required: true
+  tx_id:
+    type: int
+    required: true
+  motor_type:
+    type: string
     required: true
   can_channel:
     type: phandle
@@ -20,3 +26,9 @@ properties:
   capabilities:
     type: string-array
     required: true
+  v_max:
+    type: string
+  p_max:
+    type: string
+  t_max:
+    type: string

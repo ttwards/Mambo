@@ -1,4 +1,3 @@
-#include "motor_mi.h"
 #include "motor_rs.h"
 #include "zephyr/device.h"
 #include "zephyr/drivers/can.h"
@@ -44,12 +43,10 @@ int rs_init(const struct device *dev)
 {
 	LOG_DBG("rs_init");
 	const struct rs_motor_cfg *cfg = dev->config;
+	reg_can_dev(cfg->common.phy);
 	if (!device_is_ready(cfg->common.phy)) {
 		LOG_ERR("CAN device not ready");
 		return -1;
-	}
-	if (k_work_busy_get(&rs_init_work) != 0) {
-		return 0;
 	}
 
 	struct can_filter filter = {0};
@@ -92,6 +89,7 @@ void rs_motor_control(const struct device *dev, enum motor_cmd cmd)
 		can_send_queued(cfg->common.phy, &frame);
 		data->online = true;
 		data->enabled = true;
+		motor_report(dev);
 		break;
 	case DISABLE_MOTOR:
 		id.msg_type = Communication_Type_MotorStop;
@@ -147,12 +145,12 @@ static void rs_motor_pack(const struct device *dev, struct can_frame *frame)
 	case MIT:
 		rs_can_id->msg_type = Communication_Type_MotionControl_MIT;
 
-		pos_tmp = float_to_uint(data->target_pos, P_MIN, P_MAX, 16);
-		vel_tmp = float_to_uint(data->target_radps, V_MIN, V_MAX, 16);
+		pos_tmp = float_to_uint(data->target_pos, -cfg->p_max, cfg->p_max, 16);
+		vel_tmp = float_to_uint(data->target_radps, -cfg->v_max, cfg->v_max, 16);
 		kp_tmp = float_to_uint(data->params.k_p, KP_MIN, KP_MAX, 16);
 		kd_tmp = float_to_uint(data->params.k_d, KD_MIN, KD_MAX, 16);
-		tor_tmp = float_to_uint(data->target_torque, T_MIN, T_MAX, 16);
-		rs_can_id->msg_type = tor_tmp;
+		tor_tmp = float_to_uint(data->target_torque, 0, cfg->t_max, 16);
+		rs_can_id->reserved = tor_tmp;
 		frame->data[0] = (pos_tmp >> 8) & 0xFF;
 		frame->data[1] = pos_tmp & 0xFF;
 		frame->data[2] = (vel_tmp >> 8) & 0xFF;
@@ -161,47 +159,6 @@ static void rs_motor_pack(const struct device *dev, struct can_frame *frame)
 		frame->data[5] = kp_tmp & 0xFF;
 		frame->data[6] = (kd_tmp >> 8) & 0xFF;
 		frame->data[7] = kd_tmp & 0xFF;
-		break;
-	case PV:
-		rs_can_id->msg_type = Communication_Type_SetSingleParameter;
-		index[0] = Limit_Spd;
-		index[1] = Loc_Ref;
-		memcpy(&frame->data[0], &index[0], 2);
-
-		frame->data[2] = 0;
-		frame->data[3] = 0;
-		memcpy(&frame->data[4], &data->target_radps, 4);
-
-		rs_can_id_fol->msg_type = Communication_Type_SetSingleParameter;
-		frame_follow->dlc = 8;
-
-		memcpy(&frame_follow->data[0], &index[1], 2);
-		frame_follow->data[2] = 0;
-		frame_follow->data[3] = 0;
-		memcpy(&frame_follow->data[4], &data->target_pos, 4);
-
-		break;
-	case VO:
-		rs_can_id->msg_type = Communication_Type_SetSingleParameter;
-		vel_tmp = float_to_uint(data->target_radps, V_MIN, V_MAX, 32);
-		cur_tep = float_to_uint(data->limit_cur, 0, CUR_MAX, 32);
-		index[0] = Limit_Cur;
-		index[1] = Spd_Ref;
-		memcpy(&frame->data[0], &index[0], 2);
-
-		frame->data[2] = 0;
-		frame->data[3] = 0;
-		memcpy(&frame->data[4], &data->limit_cur, 4);
-
-		rs_can_id_fol->msg_type = Communication_Type_SetSingleParameter;
-
-		frame_follow->dlc = 8;
-
-		memcpy(&frame_follow->data[0], &index[1], 2);
-		frame_follow->data[2] = 0;
-		frame_follow->data[3] = 0;
-		memcpy(&frame_follow->data[4], &data->target_radps, 4);
-
 		break;
 	default:
 		break;
@@ -271,13 +228,14 @@ static int get_motor_id(struct can_frame *frame)
 static void rs_can_rx_handler(const struct device *can_dev, struct can_frame *frame,
 			      void *user_data)
 {
+	static uint8_t error_fb_cnt = 0;
 	const struct device *dev = (const struct device *)user_data;
 	struct rs_motor_data *data = (struct rs_motor_data *)(dev->data);
 	struct rs_can_id *can_id = (struct rs_can_id *)&(frame->id);
 	if (can_id->msg_type == Communication_Type_MotorFeedback ||
 		can_id->msg_type == Communication_Type_MotorReport) {
-		data->err = ((frame->data[0]) >> 8) & 0x1f;
-		if (data->err) {
+		data->err = (can_id->reserved) & 0x3f;
+		if (data->err && error_fb_cnt++ % 100 == 0) {
 			LOG_ERR("Error code: %d on motor %s", data->err, dev->name);
 		}
 		data->RAWangle = (frame->data[0] << 8) | (frame->data[1]);
@@ -287,51 +245,14 @@ static void rs_can_rx_handler(const struct device *can_dev, struct can_frame *fr
 	}
 }
 
-void rs_rx_data_handler(struct k_work *work)
-{
-	// LOG_DBG("rs_rx_data_handler");
-	for (int i = 0; i < MOTOR_COUNT; i++) {
-		struct rs_motor_data *data = (struct rs_motor_data *)(motor_devices[i]->data);
-		if (!data->update) {
-			continue;
-		}
-
-		float prev_angle = data->common.angle;
-		data->common.angle =
-			(uint16_to_float(data->RAWangle, (double)P_MIN, (double)P_MAX, 16)) *
-			RAD2DEG;
-		data->common.rpm =
-			RADPS2RPM(uint16_to_float(data->RAWrpm, (double)V_MIN, (double)V_MAX, 16));
-		data->common.torque =
-			uint16_to_float(data->RAWtorque, (double)T_MIN, (double)T_MAX, 16);
-		data->common.temperature = ((float)(data->RAWtemp)) / 10;
-		data->delta_deg_sum += data->common.angle - prev_angle;
-
-		data->update = false;
-	}
-}
-
-void rs_tx_isr_handler(struct k_timer *dummy)
-{
-	// LOG_DBG("rs_tx_isr_handler");
-	k_work_submit_to_queue(&rs_work_queue, &rs_tx_data_handle);
-}
-
-void rs_isr_init_handler(struct k_timer *dummy)
-{
-	LOG_DBG("rs_isr_init_handler");
-	dummy->expiry_fn = rs_tx_isr_handler;
-	k_work_queue_start(&rs_work_queue, rs_work_queue_stack, CAN_SEND_STACK_SIZE,
-			   CAN_SEND_PRIORITY, NULL);
-	k_work_submit_to_queue(&rs_work_queue, &rs_init_work);
-}
-
 int rs_get(const struct device *dev, motor_status_t *status)
 {
 	struct rs_motor_data *data = dev->data;
 	const struct rs_motor_cfg *cfg = dev->config;
 
-	data->common.angle = RAD2DEG(uint16_to_float(data->RAWangle, (double)-cfg->p_max, (double)cfg->p_max, 16));
+	// LOG_INF("raw angle: %d, raw rpm: %d, raw torque: %d, raw temp: %d",data->RAWangle, data->RAWrpm, data->RAWtorque, data->RAWtemp);
+
+	data->common.angle = RAD2DEG * uint16_to_float(data->RAWangle, (double)-cfg->p_max, (double)cfg->p_max, 16);
 	data->common.rpm = RADPS2RPM(uint16_to_float(data->RAWrpm, (double)-cfg->v_max, (double)cfg->v_max, 16));
 	data->common.torque = uint16_to_float(data->RAWtorque, (double)-cfg->t_max, (double)cfg->t_max, 16);
 	data->common.temperature = ((float)(data->RAWtemp)) / 10.0f;
@@ -363,11 +284,11 @@ int rs_send_mit(const struct device *dev, motor_status_t *status) {
 		.dlc = 8,
 		.flags = CAN_FRAME_IDE,
 	};
-	uint16_t pos_tmp = float_to_uint(data->target_pos, P_MIN, P_MAX, 16);
-	uint16_t vel_tmp = float_to_uint(data->target_radps, V_MIN, V_MAX, 16);
+	uint16_t pos_tmp = float_to_uint(data->target_pos, -cfg->p_max, cfg->p_max, 16);
+	uint16_t vel_tmp = float_to_uint(data->target_radps, -cfg->v_max, cfg->v_max, 16);
 	uint16_t kp_tmp = float_to_uint(data->params.k_p, KP_MIN, KP_MAX, 16);
 	uint16_t kd_tmp = float_to_uint(data->params.k_d, KD_MIN, KD_MAX, 16);
-	uint16_t tor_tmp = float_to_uint(data->target_torque, T_MIN, T_MAX, 16);
+	uint16_t tor_tmp = float_to_uint(data->target_torque, 0, cfg->t_max, 16);
 	id.master_id = tor_tmp;
 	frame.data[0] = (pos_tmp >> 8) & 0xFF;
 	frame.data[1] = pos_tmp & 0xFF;
@@ -390,6 +311,11 @@ int rs_send_pid_params(const struct device *dev, motor_status_t *status) {
 	};
 }
 
+/**
+ * @brief Set motor status: angle, speed, torque, mode
+ * @param dev Pointer to the motor device structure: robstride motor device
+ * @param status Pointer to the motor status structure
+ */
 int rs_set(const struct device *dev, motor_status_t *status)
 {
 	struct rs_motor_data *data = dev->data;
@@ -400,14 +326,6 @@ int rs_set(const struct device *dev, motor_status_t *status)
 		data->target_pos = status->angle / RAD2DEG;
 		data->target_radps = RPM2RADPS(status->rpm);
 		data->target_torque = status->torque;
-	} else if (status->mode == PV) {
-		strcpy(mode_str, "pv");
-		data->target_pos = status->angle / RAD2DEG;
-		data->target_radps = RPM2RADPS(status->rpm);
-	} else if (status->mode == VO) {
-		data->target_radps = RPM2RADPS(status->rpm);
-		data->target_pos = 0;
-		data->target_torque = 0;
 	} else {
 		return -ENOSYS;
 	}
@@ -427,6 +345,13 @@ int rs_set(const struct device *dev, motor_status_t *status)
 			}
 		}
 	}
+	struct can_frame frame = {0};
+	rs_motor_pack(dev, &frame);
+	can_send_queued(cfg->common.phy, &frame);
+	// else{
+	// 	LOG_ERR("Unsupported motor mode: %d", status->mode);
+	// 	return -ENOSYS;
+	// }
 	if (status->mode != data->common.mode) {
 		// LOG_DBG("rs_set: mode changed from %d to %d", data->common.mode, status->mode);
 		data->common.mode = status->mode;
@@ -439,4 +364,36 @@ int rs_set(const struct device *dev, motor_status_t *status)
 	}
 }
 
-DT_INST_FOREACH_STATUS_OKAY(MIMOTOR_INST)
+/**
+ * @brief Motor status actively report enable function
+ * @param dev Pointer to the motor device structure
+ */
+void motor_report(const struct device *dev)
+{
+	struct rs_motor_data *data = dev->data;
+	const struct rs_motor_cfg *cfg = dev->config;
+	struct rs_can_id id = {
+		.master_id = cfg->common.rx_id,
+		.motor_id = cfg->common.tx_id,
+		.reserved = 0,
+	};
+	struct can_frame frame = {
+		.data = {0},
+		.dlc = 8,
+		.flags = CAN_FRAME_IDE,
+	};
+	frame.data[0] = 0x01;
+	frame.data[1] = 0x02;
+	frame.data[2] = 0x03;
+	frame.data[3] = 0x04;
+	frame.data[4] = 0x05;
+	frame.data[5] = 0x06;
+	frame.data[6] = 0x01;
+	frame.data[7] = 0x00;
+	id.msg_type = Communication_Type_MotorReport;
+	frame.id = *(uint32_t*)&id;
+
+	can_send_queued(cfg->common.phy, &frame);
+}
+
+DT_INST_FOREACH_STATUS_OKAY(RS_MOTOR_INST)

@@ -68,7 +68,7 @@ void mi_motor_control(const struct device *dev, enum motor_cmd cmd)
 	// uint16_t master_id;
 
 	struct mi_can_id *mi_can_id = (struct mi_can_id *)&(frame.id);
-	mi_can_id->id = cfg->common.id;
+	mi_can_id->id = cfg->common.i;
 	switch (cmd) {
 	case ENABLE_MOTOR:
 
@@ -274,7 +274,7 @@ static void mi_can_rx_handler(const struct device *can_dev, struct can_frame *fr
 	}
 	struct mi_can_id *can_id = (struct mi_can_id *)&(frame->id);
 	if (can_id->mi_msg_mode == Communication_Type_MotorFeedback) {
-		data->err = ((can_id->data) >> 8) & 0x1f;
+		data->err = ((can_id->data) >> 8) & 0x3f;
 		if (data->err) {
 			LOG_ERR("id:%d err:%d", id, data->err);
 		}
