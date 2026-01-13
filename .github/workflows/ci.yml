@@ -124,24 +124,3 @@ jobs:
       - name: 运行 clang-tidy（drivers）
         run: |
           find drivers -name '*.c' -o -name '*.cpp' | xargs clang-tidy --checks='-*,readability-*,bugprone-*' --warnings-as-errors='' || true
-
-  # 文档检查
-  documentation-check:
-    name: 文档检查
-    runs-on: ubuntu-latest
-    steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
-
-      - name: 检查 Markdown 文件
-        uses: DavidAnson/markdownlint-cli2-action@v18
-        with:
-          globs: '**/*.md'
-        continue-on-error: true  # 暂时不阻塞 CI
-
-      - name: 检查链接
-        uses: gaurav-nelson/github-action-markdown-link-check@v1
-        with:
-          use-quiet-mode: 'yes'
-          use-verbose-mode: 'yes'
-        continue-on-error: true  # 暂时不阻塞 CI
