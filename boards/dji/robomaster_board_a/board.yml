@@ -1,5 +1,6 @@
 board:
   name: robomaster_board_a
+  full_name: DJI Robomaster Development Board A
   vendor: dji
   socs:
     - name: stm32f427xx
