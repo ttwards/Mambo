@@ -38,7 +38,7 @@ extern "C" {
 #endif
 
 #ifndef RPM2RADPS
-#define RPM2RADPS(rpm)   ((rpm) * 0.104719755f)
+#define RPM2RADPS(rpm) ((rpm) * 0.104719755f)
 #endif
 
 #ifndef RADPS2RPM
@@ -291,12 +291,12 @@ static inline void z_impl_motor_set_mode(const struct device *dev, enum motor_mo
 	{                                                                                          \
 		.phy = (const struct device *)DT_GET_CANPHY(node_id),                              \
 		.id = DT_PROP(node_id, id),                                                        \
-		.tx_id = DT_PROP_OR(node_id, tx_id, 0x00),                                                  \
-		.rx_id = DT_PROP_OR(node_id, rx_id, 0x00),                                                  \
+		.tx_id = DT_PROP_OR(node_id, tx_id, 0x00),                                         \
+		.rx_id = DT_PROP_OR(node_id, rx_id, 0x00),                                         \
 		.capabilities = DT_PROP(node_id, capabilities),                                    \
 		.pid_datas = {DT_FOREACH_PROP_ELEM_SEP(node_id, controllers, GET_PID_INSTANCE_PTR,   \
                                                   (, ))},                                      \
-	}
+		}
 
 #define MOTOR_DT_DRIVER_DATA_GET(node_id)                                                          \
 	{                                                                                          \

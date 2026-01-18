@@ -20,7 +20,7 @@
 		zephyr,sram = &sram0;
 		zephyr,button = &user_button;
 		zephyr,flash = &flash0;
-		zephyr,ccm = &ccm0;
+		zephyr,dtcm = &ccm0;
 		ares,pwm = &heater;
 		sbus,uart = &usart3;
 		ares,usb = &cdc_acm_uart0;

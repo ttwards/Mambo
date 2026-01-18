@@ -85,7 +85,7 @@ void rs_motor_control(const struct device *dev, enum motor_cmd cmd)
 	switch (cmd) {
 	case ENABLE_MOTOR:
 		id.msg_type = Communication_Type_MotorEnable;
-		frame.id = *(uint32_t*)&id;
+		frame.id = *(uint32_t *)&id;
 		can_send_queued(cfg->common.phy, &frame);
 		data->online = true;
 		data->enabled = true;
@@ -93,14 +93,14 @@ void rs_motor_control(const struct device *dev, enum motor_cmd cmd)
 		break;
 	case DISABLE_MOTOR:
 		id.msg_type = Communication_Type_MotorStop;
-		frame.id = *(uint32_t*)&id;
+		frame.id = *(uint32_t *)&id;
 		can_send_queued(cfg->common.phy, &frame);
 		data->online = false;
 		data->enabled = false;
 		break;
 	case SET_ZERO:
 		id.msg_type = Communication_Type_SetPosZero;
-		frame.id = *(uint32_t*)&id;
+		frame.id = *(uint32_t *)&id;
 		frame.data[0] = 0x01;
 		data->common.angle = 0;
 		can_send_queued(cfg->common.phy, &frame);
@@ -111,7 +111,7 @@ void rs_motor_control(const struct device *dev, enum motor_cmd cmd)
 		break;
 	case CLEAR_ERROR:
 		id.msg_type = Communication_Type_MotorStop;
-		frame.id = *(uint32_t*)&id;
+		frame.id = *(uint32_t *)&id;
 		frame.data[0] = 0x01;
 		can_send_queued(cfg->common.phy, &frame);
 		data->online = false;
@@ -233,7 +233,7 @@ static void rs_can_rx_handler(const struct device *can_dev, struct can_frame *fr
 	struct rs_motor_data *data = (struct rs_motor_data *)(dev->data);
 	struct rs_can_id *can_id = (struct rs_can_id *)&(frame->id);
 	if (can_id->msg_type == Communication_Type_MotorFeedback ||
-		can_id->msg_type == Communication_Type_MotorReport) {
+	    can_id->msg_type == Communication_Type_MotorReport) {
 		data->err = (can_id->reserved) & 0x3f;
 		if (data->err && error_fb_cnt++ % 100 == 0) {
 			LOG_ERR("Error code: %d on motor %s", data->err, dev->name);
@@ -250,11 +250,15 @@ int rs_get(const struct device *dev, motor_status_t *status)
 	struct rs_motor_data *data = dev->data;
 	const struct rs_motor_cfg *cfg = dev->config;
 
-	// LOG_INF("raw angle: %d, raw rpm: %d, raw torque: %d, raw temp: %d",data->RAWangle, data->RAWrpm, data->RAWtorque, data->RAWtemp);
+	// LOG_INF("raw angle: %d, raw rpm: %d, raw torque: %d, raw temp: %d",data->RAWangle,
+	// data->RAWrpm, data->RAWtorque, data->RAWtemp);
 
-	data->common.angle = RAD2DEG * uint16_to_float(data->RAWangle, (double)-cfg->p_max, (double)cfg->p_max, 16);
-	data->common.rpm = RADPS2RPM(uint16_to_float(data->RAWrpm, (double)-cfg->v_max, (double)cfg->v_max, 16));
-	data->common.torque = uint16_to_float(data->RAWtorque, (double)-cfg->t_max, (double)cfg->t_max, 16);
+	data->common.angle = RAD2DEG * uint16_to_float(data->RAWangle, (double)-cfg->p_max,
+						       (double)cfg->p_max, 16);
+	data->common.rpm = RADPS2RPM(
+		uint16_to_float(data->RAWrpm, (double)-cfg->v_max, (double)cfg->v_max, 16));
+	data->common.torque =
+		uint16_to_float(data->RAWtorque, (double)-cfg->t_max, (double)cfg->t_max, 16);
 	data->common.temperature = ((float)(data->RAWtemp)) / 10.0f;
 
 	status->angle = fmodf(data->common.angle, 360.0f);
@@ -271,7 +275,8 @@ int rs_get(const struct device *dev, motor_status_t *status)
 	return 0;
 }
 
-int rs_send_mit(const struct device *dev, motor_status_t *status) {
+int rs_send_mit(const struct device *dev, motor_status_t *status)
+{
 	struct rs_motor_data *data = dev->data;
 	const struct rs_motor_cfg *cfg = dev->config;
 	struct rs_can_id id = {
@@ -301,7 +306,8 @@ int rs_send_mit(const struct device *dev, motor_status_t *status) {
 	can_send_queued(cfg->common.phy, &frame);
 }
 
-int rs_send_pid_params(const struct device *dev, motor_status_t *status) {
+int rs_send_pid_params(const struct device *dev, motor_status_t *status)
+{
 	struct rs_motor_data *data = dev->data;
 	const struct rs_motor_cfg *cfg = dev->config;
 	struct rs_can_id id = {
@@ -391,7 +397,7 @@ void motor_report(const struct device *dev)
 	frame.data[6] = 0x01;
 	frame.data[7] = 0x00;
 	id.msg_type = Communication_Type_MotorReport;
-	frame.id = *(uint32_t*)&id;
+	frame.id = *(uint32_t *)&id;
 
 	can_send_queued(cfg->common.phy, &frame);
 }

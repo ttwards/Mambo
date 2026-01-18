@@ -12,34 +12,34 @@
 
 // ------------------- LK 协议常量定义 -------------------
 
-// 基础ID定义 
-#define LK_CMD_ID_BASE        0x140
-#define LK_REPLY_ID_BASE      0x180
+// 基础ID定义
+#define LK_CMD_ID_BASE   0x140
+#define LK_REPLY_ID_BASE 0x180
 
 // 命令字节 (Data[0])
-#define LK_CMD_READ_STAT      0x9C  // 读取电机状态2 [cite: 71]
-#define LK_CMD_CLEAR_ERR      0x9B  // 清除错误 [cite: 62]
-#define LK_CMD_MOTOR_OFF      0x80  // 电机关闭 [cite: 95]
-#define LK_CMD_MOTOR_RUN      0x88  // 电机运行 [cite: 100]
-#define LK_CMD_MOTOR_STOP     0x81  // 电机停止 [cite: 105]
-#define LK_CMD_SET_ZERO_ROM   0x19  // 设置零点到ROM [cite: 254]
-#define LK_CMD_SET_ZERO 0x95
-#define LK_SET_PARAM 0xC1
+#define LK_CMD_READ_STAT    0x9C // 读取电机状态2 [cite: 71]
+#define LK_CMD_CLEAR_ERR    0x9B // 清除错误 [cite: 62]
+#define LK_CMD_MOTOR_OFF    0x80 // 电机关闭 [cite: 95]
+#define LK_CMD_MOTOR_RUN    0x88 // 电机运行 [cite: 100]
+#define LK_CMD_MOTOR_STOP   0x81 // 电机停止 [cite: 105]
+#define LK_CMD_SET_ZERO_ROM 0x19 // 设置零点到ROM [cite: 254]
+#define LK_CMD_SET_ZERO     0x95
+#define LK_SET_PARAM        0xC1
 
 // 控制命令字节
-#define LK_CMD_TORQUE_LOOP    0xA1  // 转矩闭环 
-#define LK_CMD_SPEED_LOOP     0xA2  // 速度闭环 
-#define LK_CMD_POS_LOOP_MULTI 0xA4  // 多圈位置闭环2 (带限速) 
-#define LK_PID_ANGLE_UPDATE   0x0A  // 角度PID参数更新
-#define LK_PID_SPEED_UPDATE   0x0B  // 速度PID参数更新
-#define LK_PID_TORQUE_UPDATE  0x0C  // 转矩PID参数更新
+#define LK_CMD_TORQUE_LOOP    0xA1 // 转矩闭环
+#define LK_CMD_SPEED_LOOP     0xA2 // 速度闭环
+#define LK_CMD_POS_LOOP_MULTI 0xA4 // 多圈位置闭环2 (带限速)
+#define LK_PID_ANGLE_UPDATE   0x0A // 角度PID参数更新
+#define LK_PID_SPEED_UPDATE   0x0B // 速度PID参数更新
+#define LK_PID_TORQUE_UPDATE  0x0C // 转矩PID参数更新
 // 单位转换因子
-#define LK_POS_FACTOR         100.0f // 0.01 degree/LSB -> float * 100 = int [cite: 162]
-#define LK_SPD_FACTOR_FINE    100.0f // 0.01 dps/LSB (速度闭环控制值) [cite: 138]
-#define LK_SPD_FACTOR_COARSE  1.0f   // 1 dps/LSB (位置模式下的限速值) [cite: 163]
+#define LK_POS_FACTOR         100.0f  // 0.01 degree/LSB -> float * 100 = int [cite: 162]
+#define LK_SPD_FACTOR_FINE    100.0f  // 0.01 dps/LSB (速度闭环控制值) [cite: 138]
+#define LK_SPD_FACTOR_COARSE  1.0f    // 1 dps/LSB (位置模式下的限速值) [cite: 163]
 #define LK_TORQUE_RAW_MAX     2048.0f // 转矩控制范围 -2048~2048 [cite: 128]
 
-#define SIZE_OF_ARRAY(x)       (sizeof(x) / sizeof(x[0]))
+#define SIZE_OF_ARRAY(x) (sizeof(x) / sizeof(x[0]))
 
 // -------------------------------------------------------
 
@@ -47,53 +47,51 @@
 #define CAN_SEND_PRIORITY   -1
 #define PI                  3.14159265f
 #define RAD2DEG             (180.0f / PI)
-#define RPM2DPS             6.0f     // RPM 转 degree per second
+#define RPM2DPS             6.0f // RPM 转 degree per second
 
-enum CONTROL_MODE
-{
-    TORQUE_MODE = 0, // 对应 0xA1
-    SPEED_MODE,      // 对应 0xA2
-    POSITION_MODE    // 对应 0xA4
+enum CONTROL_MODE {
+	TORQUE_MODE = 0, // 对应 0xA1
+	SPEED_MODE,      // 对应 0xA2
+	POSITION_MODE    // 对应 0xA4
 };
 
 struct lk_can_id {
-    
-    uint16_t id;
+
+	uint16_t id;
 };
 
 struct lk_motor_data {
-    struct motor_driver_data common;
-    uint8_t can_id;    // 电机物理ID (1~32)
+	struct motor_driver_data common;
+	uint8_t can_id; // 电机物理ID (1~32)
 
-    int16_t missed_times;
-    int8_t err;
+	int16_t missed_times;
+	int8_t err;
 
-    // 目标值缓存
-    float target_pos;    // 度
-    float target_speed;  // dps (degree per second)
-    float target_torque; // 原始单位或映射后的单位
+	// 目标值缓存
+	float target_pos;    // 度
+	float target_speed;  // dps (degree per second)
+	float target_torque; // 原始单位或映射后的单位
 
-    // 限制值缓存
-    float limit_speed;   // dps
-    float limit_torque;  // raw (-2048~2048)
+	// 限制值缓存
+	float limit_speed;  // dps
+	float limit_torque; // raw (-2048~2048)
 
-    // 反馈原始数据
-    int16_t RAWtorque;
-    int16_t RAWspeed;
-    uint16_t RAWencoder;
-    int8_t  RAWtemp;
+	// 反馈原始数据
+	int16_t RAWtorque;
+	int16_t RAWspeed;
+	uint16_t RAWencoder;
+	int8_t RAWtemp;
 
-    bool online;
-    bool update;
-    bool enabled;
-    struct pid_config params[3];
-    bool pidupdate[3];
-    
+	bool online;
+	bool update;
+	bool enabled;
+	struct pid_config params[3];
+	bool pidupdate[3];
 };
 
 struct lk_motor_cfg {
-    struct motor_driver_config common;
-    uint8_t id; // 配置文件中定义的ID
+	struct motor_driver_config common;
+	uint8_t id; // 配置文件中定义的ID
 };
 
 struct k_work_q lk_work_queue;
@@ -129,39 +127,38 @@ K_TIMER_DEFINE(lk_tx_timer, lk_tx_isr_handler, NULL);
 		.common = MOTOR_DT_DRIVER_DATA_INST_GET(inst),                                     \
 		.online = false,                                                                   \
 		.missed_times = 0,                                                                 \
-		.err = 0,                                                                        \
-        .limit_speed = 800,                                                                 \
-        .limit_torque = 12,                                                               \
-        .target_pos = 0,                                                                   \
-        .target_speed = 0,                                                                 \
-        .target_torque = 0,                                                                \
-        .update = false,                                                                   \
-    };
+		.err = 0,                                                                          \
+		.limit_speed = 800,                                                                \
+		.limit_torque = 12,                                                                \
+		.target_pos = 0,                                                                   \
+		.target_speed = 0,                                                                 \
+		.target_torque = 0,                                                                \
+		.update = false,                                                                   \
+	};
 
 #define LKMOTOR_CONFIG_INST(inst)                                                                  \
-    static const struct lk_motor_cfg lk_motor_cfg_##inst = {                                   \
-        .common = MOTOR_DT_DRIVER_CONFIG_INST_GET(inst),                                   \
-        .id = (uint8_t)DT_PROP(DT_DRV_INST(inst), id),                                     \
-    };
+	static const struct lk_motor_cfg lk_motor_cfg_##inst = {                                   \
+		.common = MOTOR_DT_DRIVER_CONFIG_INST_GET(inst),                                   \
+		.id = (uint8_t)DT_PROP(DT_DRV_INST(inst), id),                                     \
+	};
 
 #define MOTOR_DEVICE_DT_DEFINE(node_id, init_fn, pm, data, config, level, prio, api, ...)          \
-    DEVICE_DT_DEFINE(node_id, init_fn, pm, data, config, level, prio, api, __VA_ARGS__)
+	DEVICE_DT_DEFINE(node_id, init_fn, pm, data, config, level, prio, api, __VA_ARGS__)
 
 #define MOTOR_DEVICE_DT_INST_DEFINE(inst, ...)                                                     \
-    MOTOR_DEVICE_DT_DEFINE(DT_DRV_INST(inst), __VA_ARGS__)
-
+	MOTOR_DEVICE_DT_DEFINE(DT_DRV_INST(inst), __VA_ARGS__)
 
 int lk_init(const struct device *dev);
 
 #define LKMOTOR_DEFINE_INST(inst)                                                                  \
-    MOTOR_DEVICE_DT_INST_DEFINE(inst, lk_init, NULL, &lk_motor_data_##inst,                    \
-                    &lk_motor_cfg_##inst, POST_KERNEL, CONFIG_MOTOR_INIT_PRIORITY, \
-                    &motor_api_funcs);
+	MOTOR_DEVICE_DT_INST_DEFINE(inst, lk_init, NULL, &lk_motor_data_##inst,                    \
+				    &lk_motor_cfg_##inst, POST_KERNEL, CONFIG_MOTOR_INIT_PRIORITY, \
+				    &motor_api_funcs);
 
 #define LKMOTOR_INST(inst)                                                                         \
-MOTOR_DT_DRIVER_PID_DEFINE(DT_DRV_INST(inst))                                                  \
-    LKMOTOR_CONFIG_INST(inst)                                                                  \
-    LKMOTOR_DATA_INST(inst)                                                                    \
-    LKMOTOR_DEFINE_INST(inst)
+	MOTOR_DT_DRIVER_PID_DEFINE(DT_DRV_INST(inst))                                              \
+	LKMOTOR_CONFIG_INST(inst)                                                                  \
+	LKMOTOR_DATA_INST(inst)                                                                    \
+	LKMOTOR_DEFINE_INST(inst)
 
 #endif // MOTOR_LK_H

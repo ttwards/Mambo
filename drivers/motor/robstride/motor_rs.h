@@ -180,9 +180,9 @@ K_MSGQ_DEFINE(rs_thread_proc_msgq, sizeof(bool), MOTOR_COUNT * 2, 4);
 		.report_interval_ms =                                                              \
 			(int)DT_STRING_UNQUOTED_OR(DT_DRV_INST(inst), report_interval_ms, 100),    \
 		.motor_type = DT_STRING_UNQUOTED_OR(DT_DRV_INST(inst), motor_type, RS02),          \
-		.p_max = DT_STRING_UNQUOTED_OR(DT_DRV_INST(inst), p_max, 12.57f),                   \
-		.v_max = DT_STRING_UNQUOTED_OR(DT_DRV_INST(inst), v_max, 44.0f),                    \
-		.t_max = DT_STRING_UNQUOTED_OR(DT_DRV_INST(inst), t_max, 17.0f),                    \
+		.p_max = DT_STRING_UNQUOTED_OR(DT_DRV_INST(inst), p_max, 12.57f),                  \
+		.v_max = DT_STRING_UNQUOTED_OR(DT_DRV_INST(inst), v_max, 44.0f),                   \
+		.t_max = DT_STRING_UNQUOTED_OR(DT_DRV_INST(inst), t_max, 17.0f),                   \
 	};
 
 #define MOTOR_DEVICE_DT_DEFINE(node_id, init_fn, pm, data, config, level, prio, api, ...)          \

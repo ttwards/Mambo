@@ -10,9 +10,9 @@
             pole_pairs = "14";
             p_max = "12.57f";
             v_max = "314.0f";
-            t_max = "1.5f"; 
+            t_max = "1.5f";
             i_max = "2.f";
-            status = "okay";                                
+            status = "okay";
         };
     };
 };

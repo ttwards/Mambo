@@ -7,10 +7,10 @@
 
 &usart6 {
     status = "okay";
-    current-speed = <115200>; 
-    
+    current-speed = <115200>;
+
     imu_sensor: hwt906 {
-        compatible = "wit,hwt906"; 
+        compatible = "wit,hwt906";
         status = "okay";
     };
 };

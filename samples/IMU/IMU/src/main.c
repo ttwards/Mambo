@@ -31,10 +31,10 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 void console_feedback(void *arg1, void *arg2, void *arg3)
 {
 	while (1) {
-		LOG_INF("q: %f, %f, %f, %f", QEKF_INS.q[0], QEKF_INS.q[1], QEKF_INS.q[2],
-			QEKF_INS.q[3]);
-		LOG_INF("Yaw: %f, Pitch: %f, Roll: %f", QEKF_INS.Yaw, QEKF_INS.Pitch,
-			QEKF_INS.Roll);
+		LOG_INF("q: %f, %f, %f, %f", (double)QEKF_INS.q[0], (double)QEKF_INS.q[1],
+			(double)QEKF_INS.q[2], (double)QEKF_INS.q[3]);
+		LOG_INF("Yaw: %f, Pitch: %f, Roll: %f", (double)QEKF_INS.Yaw,
+			(double)QEKF_INS.Pitch, (double)QEKF_INS.Roll);
 		k_msleep(200);
 	}
 }

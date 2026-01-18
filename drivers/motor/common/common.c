@@ -63,7 +63,7 @@ static void can_tx_callback(const struct device *can_dev, int error, void *user_
 }
 
 int can_send_queued(const struct device *can_dev, struct can_frame *frame)
-{	
+{
 	if (!initialized) {
 		return -ENOSYS;
 	}

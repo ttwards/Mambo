@@ -2,7 +2,7 @@
 	mi_motor {
 		motor0: motor0{
 			compatible = "mi,motor";
-            
+
 			id = <1>;
             rx_id = <0x01>;
             tx_id = <0x01>;
@@ -13,7 +13,7 @@
 			capabilities = "mit","pv", "vo";
 		};
 
-		
+
 	};
 
 	pid {
@@ -38,8 +38,7 @@
 			k_i = "0.0";
 			k_d = "0.8";
 		};
-		
-	};
-	
-};
 
+	};
+
+};

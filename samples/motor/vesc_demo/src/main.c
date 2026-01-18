@@ -1,6 +1,6 @@
 /**
  * VESC BLDC Demo Application
- * 
+ *
  * @author: EclipseaHime017
  * @date: 2026-01-09
  * Description: Demonstrates control of the Robstride RS02 brushless DC motor using Zephyr RTOS.
@@ -14,14 +14,13 @@
 
 LOG_MODULE_REGISTER(vesc_demo, LOG_LEVEL_INF);
 
-#define HIGH_BYTE(x) ((x) >> 8)
-#define LOW_BYTE(x) ((x)&0xFF)
+#define HIGH_BYTE(x)           ((x) >> 8)
+#define LOW_BYTE(x)            ((x) & 0xFF)
 #define COMBINE_HL8(HIGH, LOW) ((HIGH << 8) + LOW)
 
 // 电机设备定义
 #define MOTOR_NODE DT_INST(0, vesc_motor)
 const struct device *motor = DEVICE_DT_GET(MOTOR_NODE);
-
 
 /**
  * @brief 电机状态监控线程
@@ -43,7 +42,8 @@ void motor_monitor_thread(void *arg1, void *arg2, void *arg3)
 			continue;
 		}
 
-		LOG_INF("motor torque: %.2fN, speed: %.2f RPM, angle: %.2f degree", status.torque, status.rpm, status.angle);
+		LOG_INF("motor torque: %.2fN, speed: %.2f RPM, angle: %.2f degree", status.torque,
+			status.rpm, status.angle);
 	}
 }
 
@@ -52,9 +52,9 @@ K_THREAD_DEFINE(motor_monitor, 1024, motor_monitor_thread, NULL, NULL, NULL, 5, 
 /**
  * @brief 主函数
  */
-int main(void) 
+int main(void)
 {
-    LOG_INF("===  灵足时代无刷直流电机控制示例  ===");
+	LOG_INF("===  灵足时代无刷直流电机控制示例  ===");
 	k_sleep(K_MSEC(1000));
 	// 检查电机设备是否就绪
 	if (!device_is_ready(motor)) {
@@ -65,21 +65,21 @@ int main(void)
 	// 启用电机
 	motor_control(motor, ENABLE_MOTOR);
 	k_msleep(100); // 等待电机使能
-	
+
 	motor_set_mode(motor, ML_SPEED);
 	LOG_INF("电机已启用");
-    /* Start Feedback thread*/
-    while (1) {
-        motor_set_speed(motor, 1000.0f);
-        k_msleep(1000);
+	/* Start Feedback thread*/
+	while (1) {
+		motor_set_speed(motor, 1000.0f);
+		k_msleep(1000);
 		motor_set_speed(motor, 100.0f);
 		k_msleep(1000);
 		motor_set_speed(motor, 500.0f);
 		k_msleep(1000);
 		motor_set_speed(motor, 100.0f);
 		k_msleep(1000);
-		//测试结束
-    }
+		// 测试结束
+	}
 
-    return 0;
+	return 0;
 }
