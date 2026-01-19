@@ -4,3 +4,4 @@ mi	Xiaomi Corp.
 pid	PID Controller
 ares	ARES Devices
 pixart	PixArt Imaging Inc.
+lk	Lingkong Corp.

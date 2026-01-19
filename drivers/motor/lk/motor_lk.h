@@ -10,19 +10,17 @@
 
 #define DT_DRV_COMPAT lk_motor
 
-// ------------------- LK 协议常量定义 -------------------
-
 // 基础ID定义
 #define LK_CMD_ID_BASE   0x140
 #define LK_REPLY_ID_BASE 0x180
 
 // 命令字节 (Data[0])
-#define LK_CMD_READ_STAT    0x9C // 读取电机状态2 [cite: 71]
-#define LK_CMD_CLEAR_ERR    0x9B // 清除错误 [cite: 62]
-#define LK_CMD_MOTOR_OFF    0x80 // 电机关闭 [cite: 95]
-#define LK_CMD_MOTOR_RUN    0x88 // 电机运行 [cite: 100]
-#define LK_CMD_MOTOR_STOP   0x81 // 电机停止 [cite: 105]
-#define LK_CMD_SET_ZERO_ROM 0x19 // 设置零点到ROM [cite: 254]
+#define LK_CMD_READ_STAT    0x9C
+#define LK_CMD_CLEAR_ERR    0x9B
+#define LK_CMD_MOTOR_OFF    0x80
+#define LK_CMD_MOTOR_RUN    0x88
+#define LK_CMD_MOTOR_STOP   0x81
+#define LK_CMD_SET_ZERO_ROM 0x19
 #define LK_CMD_SET_ZERO     0x95
 #define LK_SET_PARAM        0xC1
 
@@ -34,14 +32,12 @@
 #define LK_PID_SPEED_UPDATE   0x0B // 速度PID参数更新
 #define LK_PID_TORQUE_UPDATE  0x0C // 转矩PID参数更新
 // 单位转换因子
-#define LK_POS_FACTOR         100.0f  // 0.01 degree/LSB -> float * 100 = int [cite: 162]
-#define LK_SPD_FACTOR_FINE    100.0f  // 0.01 dps/LSB (速度闭环控制值) [cite: 138]
-#define LK_SPD_FACTOR_COARSE  1.0f    // 1 dps/LSB (位置模式下的限速值) [cite: 163]
-#define LK_TORQUE_RAW_MAX     2048.0f // 转矩控制范围 -2048~2048 [cite: 128]
+#define LK_POS_FACTOR         100.0f  // 0.01 degree/LSB -> float * 100 = int
+#define LK_SPD_FACTOR_FINE    100.0f  // 0.01 dps/LSB (速度闭环控制值)
+#define LK_SPD_FACTOR_COARSE  1.0f    // 1 dps/LSB (位置模式下的限速值)
+#define LK_TORQUE_RAW_MAX     2048.0f // 转矩控制范围 -2048~2048
 
 #define SIZE_OF_ARRAY(x) (sizeof(x) / sizeof(x[0]))
-
-// -------------------------------------------------------
 
 #define CAN_SEND_STACK_SIZE 4096
 #define CAN_SEND_PRIORITY   -1
