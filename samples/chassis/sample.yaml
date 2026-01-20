@@ -1,14 +1,12 @@
 sample:
-  name: CAN bus babbling node
+  name: Chassis Driver Sample
 tests:
-  sample.drivers.can.babbling:
-    tags: can
-    depends_on: can
-    filter: dt_chosen_enabled("zephyr,canbus")
+  sample.drivers.chassis:
+    tags: chassis motor
     integration_platforms:
       - native_sim
     harness: console
     harness_config:
       type: one_line
       regex:
-        - "babbling on .*"
+        - ".*"

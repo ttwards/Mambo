@@ -1,6 +1,6 @@
 sample:
-  name: IMU四元数EKF姿态估计示例
-  description: 使用ARES框架的四元数扩展卡尔曼滤波器处理IMU传感器数据并估计姿态角度
+  name: IMU Quaternion EKF
+  description: Attitude estimation using Quaternion Extended Kalman Filter (EKF) with IMU data.
 tests:
   sample.ares.imu.quaternion_ekf:
     tags: sensor imu ekf ares
