@@ -1,14 +1,14 @@
 sample:
-  name: CAN bus babbling node
+  name: IMU Accelerometer Calibration
+  description: Calibrate the accelerometer using Levenberg-Marquardt optimization.
 tests:
-  sample.drivers.can.babbling:
-    tags: can
-    depends_on: can
-    filter: dt_chosen_enabled("zephyr,canbus")
+  sample.ares.imu.calibrate:
+    tags: sensor imu calibration
+    depends_on: sensor
     integration_platforms:
-      - native_sim
+      - robomaster_board_c
     harness: console
     harness_config:
-      type: one_line
+      type: multi_line
       regex:
-        - "babbling on .*"
+        - "Starting Accelerometer Calibration..."

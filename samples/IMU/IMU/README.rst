@@ -1,61 +1,49 @@
 .. zephyr:code-sample:: imu-quaternion-ekf
-   :name: IMU四元数扩展卡尔曼滤波器示例
+   :name: IMU Quaternion EKF
+   :relevant-api: sensor_interface
 
-   使用四元数EKF算法处理IMU传感器数据并估计姿态角度。
+   Attitude estimation using Quaternion Extended Kalman Filter (EKF) with IMU data.
 
-概述
-****
-
-这个示例应用演示了如何使用ARES框架中的四元数扩展卡尔曼滤波器(Quaternion EKF)来处理IMU传感器数据。该示例集成了BMI08x系列的加速度计和陀螺仪，通过Hongxi Wong的QEKF融合算法实现精确的姿态估计。
-
-传感器配置
-==========
-
-该示例使用以下传感器：
-
-* **BMI08x加速度计**: 测量线性加速度，用于重力方向估计
-* **BMI08x陀螺仪**: 测量角速度，提供高频率姿态更新
-
-传感器通过SPI接口连接，支持高频率数据采集(最高2000Hz)。
-
-硬件要求
+Overview
 ********
 
-* RoboMaster Board C (STM32F407)
-* DM MC02开发板
+This sample demonstrates how to use the Quaternion Extended Kalman Filter (EKF) from the ARES framework to estimate the device's attitude. It fuses data from the BMI08x accelerometer and gyroscope to provide a stable orientation output.
 
-构建和运行
-**********
+The sample uses the Hongxi Wong's QEKF algorithm to calculate:
 
-以RoboMaster Board C为例的构建命令:
+*   **Quaternion:** [q0, q1, q2, q3]
+*   **Euler Angles:** Yaw, Pitch, Roll
 
-`west build -b robomaster_board_c samples/IMU`
+Requirements
+************
 
-配置选项
-========
+*   A supported board (e.g., RoboMaster Board C or DM MC02).
+*   BMI08x IMU sensor (Accelerometer and Gyroscope) configured in the devicetree.
+*   ARES framework and DSP libraries enabled.
 
-主要的Kconfig配置选项：
+Building and Running
+********************
 
-* ``CONFIG_ARES=y`` - 启用ARES框架
-* ``CONFIG_MAHONY_LIB=y`` - 启用Mahony算法库
-* ``CONFIG_AUTO_PROBE_GYRO_BIAS=y`` - 启用陀螺仪零偏自动估计
-* ``CONFIG_CMSIS_DSP=y`` - 启用CMSIS DSP库用于矩阵运算
-* ``CONFIG_PLOTTER=y`` - 启用数据绘图功能
+Build and flash the sample for the ``robomaster_board_c``:
 
-示例输出
-========
+.. zephyr-app-commands::
+   :zephyr-app: samples/IMU/IMU
+   :board: robomaster_board_c
+   :goals: build flash
+   :compact:
 
-控制台输出示例:
+Sample Output
+*************
+
+The application outputs attitude data to the console:
 
 .. code-block:: console
 
-   *** Booting Zephyr OS build ***
-   [00:00:01.000,000] <inf> main: q: 1.000000, 0.000000, 0.000000, 0.000000
-   [00:00:01.200,000] <inf> main: Yaw: 0.123456, Pitch: 0.654321, Roll: 0.987654
-   [00:00:01.400,000] <inf> main: q: 0.999123, 0.001234, 0.005678, 0.009876
-   [00:00:01.600,000] <inf> main: Yaw: 1.234567, Pitch: 0.765432, Roll: 1.098765
+   [00:00:01.000] <inf> main: q: 1.000000, 0.000000, 0.000000, 0.000000
+   [00:00:01.000] <inf> main: Yaw: 0.123456, Pitch: 0.654321, Roll: 0.987654
 
-输出数据说明:
+Usage
+*****
 
-* **q**: 四元数分量 [q0, q1, q2, q3]，表示当前姿态
-* **Yaw/Pitch/Roll**: 欧拉角(度)，分别表示偏航角、俯仰角、横滚角
+1.  Connect the board to a PC via USB/TTL to view console output.
+2.  Rotate the board to see the Yaw, Pitch, and Roll angles change in real-time.
