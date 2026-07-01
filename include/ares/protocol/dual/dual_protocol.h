@@ -94,6 +94,8 @@ enum frame_type {
 #define SYNC_PACK_STATUS_WRITE BIT(1)
 #define SYNC_PACK_STATUS_DONE  BIT(2)
 
+#define DUAL_TX_IN_FLIGHT 0
+
 #define GET_8BITS(buf, n_byte)  (*(uint8_t *)(buf + n_byte))
 #define GET_16BITS(buf, n_byte) (*(uint16_t *)(buf + n_byte))
 #define GET_32BITS(buf, n_byte) (*(uint32_t *)(buf + n_byte))
@@ -116,7 +118,7 @@ struct sync_pack {
 	dual_trans_cb_t cb;
 	uint8_t *buf;
 
-	struct k_mutex mutex;
+	atomic_t tx_state;
 };
 
 struct id_mapping {
@@ -127,7 +129,7 @@ struct id_mapping {
 	uint32_t arg3;
 	uint16_t req_id;
 
-	struct k_mutex mutex;
+	atomic_t tx_state;
 	__aligned(4) uint8_t buf[REPL_FRAME_LENGTH + 2]; // +2 for potential CRC16
 };
 
@@ -207,19 +209,6 @@ int dual_sync_flush(struct AresProtocol *protocol, sync_table_t *pack);
 	};                                                                                         \
 	struct dual_protocol_data Protocol_name##_data = {                                         \
 		.name = #Protocol_name,                                                            \
-		.heart_beat_timer = {0},                                                           \
-		.err_frame_mutex = {0},                                                            \
-		.func_cnt = 0,                                                                     \
-		.sync_cnt = 0,                                                                     \
-		.func_tx_bckup_msgq = {0},                                                         \
-		.online = false,                                                                   \
-		.func_tx_bckup_cnt = 0,                                                            \
-		.state = PARSER_STATE_IDLE,                                                        \
-		.current_frame_type = FRAME_TYPE_UNKNOWN,                                          \
-		.rx_buffer_pos = 0,                                                                \
-		.expected_frame_length = 0,                                                        \
-		.header_value = 0,                                                                 \
-		.crc_enabled = false,                                                              \
 	};                                                                                         \
 	struct AresProtocol Protocol_name = {                                                      \
 		.name = #Protocol_name,                                                            \
@@ -236,18 +225,6 @@ int dual_sync_flush(struct AresProtocol *protocol, sync_table_t *pack);
 	};                                                                                         \
 	struct dual_protocol_data Protocol_name##_data = {                                         \
 		.name = #Protocol_name,                                                            \
-		.heart_beat_timer = {0},                                                           \
-		.err_frame_mutex = {0},                                                            \
-		.func_cnt = 0,                                                                     \
-		.sync_cnt = 0,                                                                     \
-		.func_tx_bckup_msgq = {0},                                                         \
-		.online = false,                                                                   \
-		.func_tx_bckup_cnt = 0,                                                            \
-		.state = PARSER_STATE_IDLE,                                                        \
-		.current_frame_type = FRAME_TYPE_UNKNOWN,                                          \
-		.rx_buffer_pos = 0,                                                                \
-		.expected_frame_length = 0,                                                        \
-		.header_value = 0,                                                                 \
 		.crc_enabled = true,                                                               \
 	};                                                                                         \
 	struct AresProtocol Protocol_name = {                                                      \
