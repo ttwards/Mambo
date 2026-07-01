@@ -14,7 +14,11 @@
 LOG_MODULE_REGISTER(main_app, LOG_LEVEL_INF);
 
 #if IS_ENABLED(CONFIG_UART_INTERFACE)
+#if DT_HAS_CHOSEN(ares_uart)
+#define UART_DEV DT_CHOSEN(ares_uart)
+#else
 #define UART_DEV DT_NODELABEL(usart6)
+#endif
 static const struct device *uart_dev = DEVICE_DT_GET(UART_DEV);
 #endif
 
