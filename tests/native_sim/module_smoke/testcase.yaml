@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+
+tests:
+  ares.native_sim.module_smoke:
+    tags:
+      - ares
+      - native_sim
+    platform_allow:
+      - native_sim/native/64
+    integration_platforms:
+      - native_sim/native/64

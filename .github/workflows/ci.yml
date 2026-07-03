@@ -31,6 +31,51 @@ jobs:
         run: |
           pre-commit run --all-files --show-diff-on-failure
 
+  # native_sim 测试
+  native-sim-tests:
+    name: native_sim 测试
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          path: mambo
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git cmake ninja-build gperf ccache \
+            device-tree-compiler python3-dev python3-pip \
+            python3-setuptools python3-wheel file make gcc g++
+
+      - name: 初始化 West 工作空间
+        run: |
+          pip install --upgrade pip
+          pip install west
+          west init -l mambo
+          west update
+
+      - name: 安装 Zephyr Python 依赖
+        run: |
+          pip install \
+            -r zephyr/scripts/requirements-base.txt \
+            -r zephyr/scripts/requirements-build-test.txt \
+            natsort
+
+      - name: 运行 native_sim 测试
+        env:
+          ZEPHYR_TOOLCHAIN_VARIANT: host
+        run: |
+          west twister -T mambo/tests/native_sim \
+            --platform native_sim/native/64 \
+            --inline-logs
+
   # Zephyr 构建测试
   build-samples:
     name: 编译示例程序
