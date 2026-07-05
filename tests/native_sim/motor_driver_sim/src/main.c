@@ -1410,6 +1410,20 @@ ZTEST(motor_driver_sim, test_rs_offline_enable_retries_auto_report)
 	wait_for_tx_after(0, match_rs_auto_report_tx, "RS offline auto-report retry");
 }
 
+ZTEST(motor_driver_sim, test_rs_online_reset_state_retries_enable)
+{
+	driver_motor_control(RS_DEV, DISABLE_MOTOR);
+	force_motor_offline(RS_DEV);
+	driver_motor_control(RS_DEV, ENABLE_MOTOR);
+	emit_rs_reset_feedback();
+	wait_for_online_state(RS_DEV, true, ONLINE_RECOVERY_MS, "RS");
+	expect_requested_enabled(RS_DEV, true, "RS");
+	expect_status_enabled(RS_DEV, false, "RS");
+
+	sim_reset_tx_history();
+	wait_for_tx_after(0, match_rs_enable_tx, "RS online reset enable retry");
+}
+
 ZTEST(motor_driver_sim, test_continuous_command_packing_order_and_latency)
 {
 	verify_mit_payload_sequence(DM_DEV, "DM", match_dm_tx, emit_dm_feedback, expected_dm_mit,

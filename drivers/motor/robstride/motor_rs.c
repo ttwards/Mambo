@@ -422,10 +422,12 @@ static void rs_offline_recovery_handler(struct k_work *work)
 		const struct device *dev = motor_devices[i];
 		struct rs_motor_data *data = dev->data;
 		const struct rs_motor_cfg *cfg = dev->config;
+		bool online = data->common.link.online;
+		bool motor_enabled = online && data->mode_state == RS_MODE_STATE_MOTOR;
 
-		if (data->common.link.requested_enabled && !data->common.link.online) {
-			rs_send_enable_frame(dev, "rs-offline-enable");
-			if (cfg->auto_report) {
+		if (data->common.link.requested_enabled && !motor_enabled) {
+			rs_send_enable_frame(dev, online ? "rs-state-enable" : "rs-offline-enable");
+			if (!online && cfg->auto_report) {
 				rs_send_auto_report_frame(dev, "rs-offline-report");
 			}
 		}
