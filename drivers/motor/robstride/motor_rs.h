@@ -127,6 +127,7 @@ struct rs_motor_data {
 	uint16_t RAWtemp;
 
 	uint8_t mode_state;
+	bool auto_report_needs_setup;
 	uint8_t error_code;
 	struct motor_controller_params params;
 };

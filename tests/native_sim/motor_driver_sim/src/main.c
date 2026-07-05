@@ -1450,6 +1450,11 @@ ZTEST(motor_driver_sim, test_rs_online_reset_state_retries_enable)
 	sim_reset_tx_history();
 	expect_tx_count_in_window("RS online reset enable retry", match_rs_enable_tx,
 				  ENABLE_RETRY_WINDOW_MS, ENABLE_RETRY_MIN_FRAMES);
+
+	emit_rs_feedback();
+	expect_status_enabled(RS_DEV, true, "RS");
+	sim_reset_tx_history();
+	wait_for_tx_after(0, match_rs_auto_report_tx, "RS reset recovery auto-report");
 }
 
 ZTEST(motor_driver_sim, test_dm_online_disabled_state_retries_enable)
@@ -1466,6 +1471,36 @@ ZTEST(motor_driver_sim, test_dm_online_disabled_state_retries_enable)
 	sim_reset_tx_history();
 	expect_tx_count_in_window("DM online disabled enable retry", match_dm_enable_tx,
 				  ENABLE_RETRY_WINDOW_MS, ENABLE_RETRY_MIN_FRAMES);
+}
+
+ZTEST(motor_driver_sim, test_rs_enable_request_rearms_auto_report)
+{
+	driver_motor_control(RS_DEV, DISABLE_MOTOR);
+	emit_rs_feedback();
+	expect_online(RS_DEV, true, "RS");
+	expect_requested_enabled(RS_DEV, false, "RS");
+
+	driver_motor_control(RS_DEV, ENABLE_MOTOR);
+	emit_rs_feedback();
+	expect_status_enabled(RS_DEV, true, "RS");
+
+	sim_reset_tx_history();
+	wait_for_tx_after(0, match_rs_auto_report_tx, "RS enable request auto-report");
+}
+
+ZTEST(motor_driver_sim, test_rs_missing_reports_retries_enable_and_auto_report)
+{
+	driver_motor_control(RS_DEV, DISABLE_MOTOR);
+	force_motor_offline(RS_DEV);
+	driver_motor_control(RS_DEV, ENABLE_MOTOR);
+	emit_rs_feedback();
+	wait_for_online_state(RS_DEV, true, ONLINE_RECOVERY_MS, "RS");
+	expect_status_enabled(RS_DEV, true, "RS");
+
+	sim_reset_tx_history();
+	wait_for_online_state(RS_DEV, false, 800, "RS");
+	wait_for_tx_after(0, match_rs_enable_tx, "RS missing reports enable retry");
+	wait_for_tx_after(0, match_rs_auto_report_tx, "RS missing reports auto-report");
 }
 
 ZTEST(motor_driver_sim, test_continuous_command_packing_order_and_latency)

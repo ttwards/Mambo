@@ -24,6 +24,7 @@ LOG_MODULE_REGISTER(motor_rs, CONFIG_MOTOR_LOG_LEVEL);
 #define RS_CSP_DEFAULT_SPD_KI         0.02f
 #define RS_FEEDBACK_MASK              0x1F00FF00U
 #define RS_ENABLE_RETRY_PERIOD_MS     10U
+#define RS_OFFLINE_MISSED_REPORTS     20
 
 static float uint16_to_float(uint16_t x, float x_min, float x_max, int bits)
 {
@@ -235,6 +236,9 @@ void rs_motor_control(const struct device *dev, enum motor_cmd cmd)
 	};
 	switch (cmd) {
 	case ENABLE_MOTOR:
+		if (!data->common.link.requested_enabled) {
+			data->auto_report_needs_setup = true;
+		}
 		motor_link_request_enable(&data->common.link);
 		rs_send_enable_frame(dev, "rs-stop-before-enable");
 		break;
@@ -422,14 +426,32 @@ static void rs_offline_recovery_handler(struct k_work *work)
 		const struct device *dev = motor_devices[i];
 		struct rs_motor_data *data = dev->data;
 		const struct rs_motor_cfg *cfg = dev->config;
-		bool online = data->common.link.online;
-		bool motor_enabled = online && data->mode_state == RS_MODE_STATE_MOTOR;
+		bool online;
+		bool motor_enabled;
 
+		if (data->common.link.requested_enabled &&
+		    motor_link_note_periodic_timeout(dev, &data->common.link,
+						     RS_OFFLINE_MISSED_REPORTS)) {
+			data->mode_state = RS_MODE_STATE_RESET;
+			data->auto_report_needs_setup = true;
+		}
+
+		online = data->common.link.online;
+		motor_enabled = online && data->mode_state == RS_MODE_STATE_MOTOR;
+
+		if (!online) {
+			data->auto_report_needs_setup = true;
+		}
 		if (data->common.link.requested_enabled && !motor_enabled) {
 			rs_send_enable_frame(dev, online ? "rs-state-enable" : "rs-offline-enable");
 			if (!online && cfg->auto_report) {
 				rs_send_auto_report_frame(dev, "rs-offline-report");
 			}
+		} else if (motor_enabled && data->auto_report_needs_setup) {
+			if (cfg->auto_report) {
+				rs_send_auto_report_frame(dev, "rs-enable-report");
+			}
+			data->auto_report_needs_setup = false;
 		}
 	}
 
@@ -455,6 +477,9 @@ static void rs_can_rx_handler(const struct device *can_dev, struct can_frame *fr
 	    can_id->msg_type == Communication_Type_MotorReport) {
 		data->err = (can_id->reserved) & 0x3f;
 		data->mode_state = (can_id->reserved >> 6) & 0x03U;
+		if (data->mode_state == RS_MODE_STATE_RESET) {
+			data->auto_report_needs_setup = true;
+		}
 		if (data->err) {
 			motor_stats_inc(MOTOR_STAT_DRIVER_ERROR);
 		}
