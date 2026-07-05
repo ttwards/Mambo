@@ -19,6 +19,13 @@
 		k_p = "0.0001";
 	};
 
+	test_pv: test_pv {
+		compatible = "motor-controller,pv";
+		pos_k_p = "2.0";
+		vel_k_i = "0.02";
+		vel_out_max = "2.0";
+	};
+
 	fake_can: fake_can {
 		compatible = "ares,test-can";
 		status = "okay";
@@ -57,7 +64,7 @@
 		rx_id = <0x00>;
 		can_channel = <&fake_can>;
 		motor_type = "RS02";
-		controllers = <&test_mit>;
+		controllers = <&test_mit &test_pv>;
 		auto_report;
 	};
 

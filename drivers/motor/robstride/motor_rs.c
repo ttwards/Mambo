@@ -238,6 +238,7 @@ void rs_motor_control(const struct device *dev, enum motor_cmd cmd)
 	case ENABLE_MOTOR:
 		if (!data->common.link.requested_enabled) {
 			data->auto_report_needs_setup = true;
+			data->control_needs_setup = true;
 		}
 		motor_link_request_enable(&data->common.link);
 		rs_send_enable_frame(dev, "rs-stop-before-enable");
@@ -434,6 +435,7 @@ static void rs_offline_recovery_handler(struct k_work *work)
 						     RS_OFFLINE_MISSED_REPORTS)) {
 			data->mode_state = RS_MODE_STATE_RESET;
 			data->auto_report_needs_setup = true;
+			data->control_needs_setup = true;
 		}
 
 		online = data->common.link.online;
@@ -441,6 +443,7 @@ static void rs_offline_recovery_handler(struct k_work *work)
 
 		if (!online) {
 			data->auto_report_needs_setup = true;
+			data->control_needs_setup = true;
 		}
 		if (data->common.link.requested_enabled && !motor_enabled) {
 			rs_send_enable_frame(dev, online ? "rs-state-enable" : "rs-offline-enable");
@@ -570,11 +573,13 @@ int rs_set(const struct device *dev, motor_setpoint_t *status)
 	} else {
 		return -ENOSYS;
 	}
-	if (status->mode != previous_mode || status->controller_id != previous_controller_id) {
+	if (status->mode != previous_mode || status->controller_id != previous_controller_id ||
+	    data->control_needs_setup) {
 		if (rs_apply_controller_mode(dev, status->mode) < 0) {
 			motor_stats_inc(MOTOR_STAT_UNSUPPORTED_MODE);
 			return -EIO;
 		}
+		data->control_needs_setup = false;
 	} else {
 		data->common.mode = status->mode;
 	}

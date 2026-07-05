@@ -49,8 +49,11 @@
 #define RS_MODE_FEEDBACK     0x02U
 #define RS_MODE_MOTOR_ENABLE 0x03U
 #define RS_MODE_MOTOR_REPORT 0x18U
+#define RS_MODE_SET_PARAM    0x12U
 #define RS_STATE_RESET       0x00U
 #define RS_STATE_MOTOR       0x02U
+#define RS_PARAM_RUN_MODE    0x7005U
+#define RS_RUN_MODE_CSP      5U
 
 #define SIM_FILTER_MAX 16
 #define SIM_TX_MAX     128
@@ -634,6 +637,18 @@ static bool match_rs_enable_tx(const struct can_frame *frame)
 static bool match_rs_auto_report_tx(const struct can_frame *frame)
 {
 	return match_rs_msg_type(frame, RS_MODE_MOTOR_REPORT);
+}
+
+static bool match_rs_csp_mode_tx(const struct can_frame *frame)
+{
+	uint16_t index;
+
+	if (!match_rs_msg_type(frame, RS_MODE_SET_PARAM) || frame->dlc != CAN_MAX_DLEN) {
+		return false;
+	}
+
+	memcpy(&index, frame->data, sizeof(index));
+	return index == RS_PARAM_RUN_MODE && frame->data[4] == RS_RUN_MODE_CSP;
 }
 
 static bool match_lk_tx(const struct can_frame *frame)
@@ -1501,6 +1516,34 @@ ZTEST(motor_driver_sim, test_rs_missing_reports_retries_enable_and_auto_report)
 	wait_for_online_state(RS_DEV, false, 800, "RS");
 	wait_for_tx_after(0, match_rs_enable_tx, "RS missing reports enable retry");
 	wait_for_tx_after(0, match_rs_auto_report_tx, "RS missing reports auto-report");
+}
+
+ZTEST(motor_driver_sim, test_rs_missing_reports_rearms_control_mode)
+{
+	int ret;
+
+	driver_motor_control(RS_DEV, DISABLE_MOTOR);
+	force_motor_offline(RS_DEV);
+	driver_motor_control(RS_DEV, ENABLE_MOTOR);
+	emit_rs_feedback();
+	wait_for_online_state(RS_DEV, true, ONLINE_RECOVERY_MS, "RS");
+	expect_status_enabled(RS_DEV, true, "RS");
+
+	ret = motor_set_angle(RS_DEV, 10.0f);
+	zassert_equal(ret, 0, "RS rejected initial PV setpoint %d", ret);
+	wait_for_tx_after(0, match_rs_csp_mode_tx, "RS initial CSP mode setup");
+	emit_rs_feedback();
+
+	sim_reset_tx_history();
+	wait_for_online_state(RS_DEV, false, 800, "RS");
+	emit_rs_feedback();
+	wait_for_online_state(RS_DEV, true, ONLINE_RECOVERY_MS, "RS");
+	expect_status_enabled(RS_DEV, true, "RS");
+
+	sim_reset_tx_history();
+	ret = motor_set_angle(RS_DEV, 12.0f);
+	zassert_equal(ret, 0, "RS rejected recovered PV setpoint %d", ret);
+	wait_for_tx_after(0, match_rs_csp_mode_tx, "RS recovered CSP mode setup");
 }
 
 ZTEST(motor_driver_sim, test_continuous_command_packing_order_and_latency)

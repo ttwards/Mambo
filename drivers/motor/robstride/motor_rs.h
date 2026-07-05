@@ -128,6 +128,7 @@ struct rs_motor_data {
 
 	uint8_t mode_state;
 	bool auto_report_needs_setup;
+	bool control_needs_setup;
 	uint8_t error_code;
 	struct motor_controller_params params;
 };
@@ -171,6 +172,7 @@ static const struct device *motor_devices[] = {DT_INST_FOREACH_STATUS_OKAY(RS_MO
 		.target_pos = 0,                                                                   \
 		.target_radps = 0,                                                                 \
 		.target_torque = 0,                                                                \
+		.control_needs_setup = true,                                                       \
 		.params = {0, 0},                                                                  \
 	};
 
