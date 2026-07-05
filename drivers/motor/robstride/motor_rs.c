@@ -23,7 +23,7 @@ LOG_MODULE_REGISTER(motor_rs, CONFIG_MOTOR_LOG_LEVEL);
 #define RS_CSP_DEFAULT_LIMIT_CUR      2.0f
 #define RS_CSP_DEFAULT_SPD_KI         0.02f
 #define RS_FEEDBACK_MASK              0x1F00FF00U
-#define RS_OFFLINE_RECOVERY_PERIOD_MS 200U
+#define RS_ENABLE_RETRY_PERIOD_MS     10U
 
 static float uint16_to_float(uint16_t x, float x_min, float x_max, int bits)
 {
@@ -220,7 +220,7 @@ int rs_init(const struct device *dev)
 		}
 	}
 
-	k_work_schedule(&rs_offline_recovery_work, K_MSEC(RS_OFFLINE_RECOVERY_PERIOD_MS));
+	k_work_schedule(&rs_offline_recovery_work, K_MSEC(RS_ENABLE_RETRY_PERIOD_MS));
 	return 0;
 }
 
@@ -433,7 +433,7 @@ static void rs_offline_recovery_handler(struct k_work *work)
 		}
 	}
 
-	k_work_schedule(&rs_offline_recovery_work, K_MSEC(RS_OFFLINE_RECOVERY_PERIOD_MS));
+	k_work_schedule(&rs_offline_recovery_work, K_MSEC(RS_ENABLE_RETRY_PERIOD_MS));
 }
 
 static void rs_can_rx_handler(const struct device *can_dev, struct can_frame *frame,

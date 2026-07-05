@@ -65,6 +65,8 @@
 #define DJI_CONTROL_LATENCY_MS     30
 #define ONLINE_RECOVERY_MS         30
 #define REPLY_RESPONDER_STACK_SIZE 1024
+#define ENABLE_RETRY_WINDOW_MS     500
+#define ENABLE_RETRY_MIN_FRAMES    20
 
 struct sim_filter {
 	bool used;
@@ -416,6 +418,21 @@ static void wait_for_tx_after(uint32_t start, bool (*match)(const struct can_fra
 	sim_dump_tx_since(start);
 	zassert_true(false, "%s did not transmit the expected CAN frame (tx count %u -> %u)", name,
 		     start, sim_current_tx_count());
+}
+
+static void expect_tx_count_in_window(const char *name, bool (*match)(const struct can_frame *frame),
+				      int window_ms, uint32_t min_count)
+{
+	uint32_t start = sim_current_tx_count();
+	uint32_t count;
+
+	k_sleep(K_MSEC(window_ms));
+	count = sim_count_tx_since(start, match);
+	if (count < min_count) {
+		sim_dump_tx_since(start);
+	}
+	zassert_true(count >= min_count, "%s sent %u frames in %d ms, expected at least %u",
+		     name, count, window_ms, min_count);
 }
 
 static void expect_payload_sequence_step(const char *name,
@@ -1431,7 +1448,8 @@ ZTEST(motor_driver_sim, test_rs_online_reset_state_retries_enable)
 	expect_status_enabled(RS_DEV, false, "RS");
 
 	sim_reset_tx_history();
-	wait_for_tx_after(0, match_rs_enable_tx, "RS online reset enable retry");
+	expect_tx_count_in_window("RS online reset enable retry", match_rs_enable_tx,
+				  ENABLE_RETRY_WINDOW_MS, ENABLE_RETRY_MIN_FRAMES);
 }
 
 ZTEST(motor_driver_sim, test_dm_online_disabled_state_retries_enable)
@@ -1446,7 +1464,8 @@ ZTEST(motor_driver_sim, test_dm_online_disabled_state_retries_enable)
 	expect_status_enabled(DM_DEV, false, "DM");
 
 	sim_reset_tx_history();
-	wait_for_tx_after(0, match_dm_enable_tx, "DM online disabled enable retry");
+	expect_tx_count_in_window("DM online disabled enable retry", match_dm_enable_tx,
+				  ENABLE_RETRY_WINDOW_MS, ENABLE_RETRY_MIN_FRAMES);
 }
 
 ZTEST(motor_driver_sim, test_continuous_command_packing_order_and_latency)
