@@ -49,6 +49,8 @@
 #define RS_MODE_FEEDBACK     0x02U
 #define RS_MODE_MOTOR_ENABLE 0x03U
 #define RS_MODE_MOTOR_REPORT 0x18U
+#define RS_STATE_RESET       0x00U
+#define RS_STATE_MOTOR       0x02U
 
 #define SIM_FILTER_MAX 16
 #define SIM_TX_MAX     128
@@ -798,15 +800,26 @@ static void emit_mi_feedback(void)
 	sim_emit_frame(DEVICE_DT_GET(DT_NODELABEL(fake_can)), &frame);
 }
 
-static void emit_rs_feedback(void)
+static void emit_rs_feedback_state(uint8_t mode_state)
 {
 	struct can_frame frame = {
-		.id = (RS_MODE_FEEDBACK << 24) | (RS_TX_ID << 8),
+		.id = (RS_MODE_FEEDBACK << 24) | ((mode_state & 0x03U) << 22) |
+		      (RS_TX_ID << 8),
 		.flags = CAN_FRAME_IDE,
 		.dlc = 8,
 	};
 
 	sim_emit_frame(DEVICE_DT_GET(DT_NODELABEL(fake_can)), &frame);
+}
+
+static void emit_rs_feedback(void)
+{
+	emit_rs_feedback_state(RS_STATE_MOTOR);
+}
+
+static void emit_rs_reset_feedback(void)
+{
+	emit_rs_feedback_state(RS_STATE_RESET);
 }
 
 static void emit_lk_feedback(void)
@@ -1267,6 +1280,28 @@ static void verify_status_enabled_mirrors_request(const struct device *dev, cons
 	expect_status_enabled(dev, false, name);
 }
 
+static void verify_rs_status_enabled_from_feedback(void)
+{
+	driver_motor_control(RS_DEV, DISABLE_MOTOR);
+	force_motor_offline(RS_DEV);
+	expect_status_enabled(RS_DEV, false, "RS");
+
+	driver_motor_control(RS_DEV, ENABLE_MOTOR);
+	expect_requested_enabled(RS_DEV, true, "RS");
+	emit_rs_reset_feedback();
+	wait_for_online_state(RS_DEV, true, ONLINE_RECOVERY_MS, "RS");
+	expect_status_enabled(RS_DEV, false, "RS");
+
+	emit_rs_feedback();
+	expect_status_enabled(RS_DEV, true, "RS");
+
+	driver_motor_control(RS_DEV, DISABLE_MOTOR);
+	expect_requested_enabled(RS_DEV, false, "RS");
+	expect_status_enabled(RS_DEV, true, "RS");
+	emit_rs_reset_feedback();
+	expect_status_enabled(RS_DEV, false, "RS");
+}
+
 static void verify_disable_preserves_online(const struct device *dev, const char *name,
 					    void (*emit_feedback)(void))
 {
@@ -1316,7 +1351,7 @@ ZTEST(motor_driver_sim, test_requested_enabled_state_transitions)
 ZTEST(motor_driver_sim, test_status_enabled_state_transitions)
 {
 	verify_status_enabled_mirrors_request(MI_DEV, "MI");
-	verify_status_enabled_mirrors_request(RS_DEV, "RS");
+	verify_rs_status_enabled_from_feedback();
 	verify_status_enabled_mirrors_request(LK_DEV, "LK");
 	verify_status_enabled_mirrors_request(DJI_DEV, "DJI");
 

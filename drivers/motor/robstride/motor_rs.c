@@ -452,6 +452,7 @@ static void rs_can_rx_handler(const struct device *can_dev, struct can_frame *fr
 	if (can_id->msg_type == Communication_Type_MotorFeedback ||
 	    can_id->msg_type == Communication_Type_MotorReport) {
 		data->err = (can_id->reserved) & 0x3f;
+		data->mode_state = (can_id->reserved >> 6) & 0x03U;
 		if (data->err) {
 			motor_stats_inc(MOTOR_STAT_DRIVER_ERROR);
 		}
@@ -473,7 +474,7 @@ int rs_get(const struct device *dev, motor_status_t *status)
 	const struct rs_motor_cfg *cfg = dev->config;
 
 	status->online = data->common.link.online;
-	status->enabled = data->common.link.requested_enabled;
+	status->enabled = data->common.link.online && data->mode_state == RS_MODE_STATE_MOTOR;
 	status->error = data->err;
 
 	if (!data->common.link.online) {

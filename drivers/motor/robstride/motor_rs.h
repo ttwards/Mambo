@@ -65,6 +65,10 @@
 #define Motor_Error 0x00
 #define Motor_OK    0x01
 
+#define RS_MODE_STATE_RESET 0U
+#define RS_MODE_STATE_CALI  1U
+#define RS_MODE_STATE_MOTOR 2U
+
 #define CAN_FILTER_MASK 0x0000FF00
 
 enum CONTROL_MODE // 控制模式定义
@@ -122,6 +126,7 @@ struct rs_motor_data {
 	uint16_t RAWtorque;
 	uint16_t RAWtemp;
 
+	uint8_t mode_state;
 	uint8_t error_code;
 	struct motor_controller_params params;
 };
