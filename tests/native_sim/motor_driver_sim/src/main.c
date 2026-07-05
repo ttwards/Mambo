@@ -584,6 +584,16 @@ static bool match_dm_tx(const struct can_frame *frame)
 	return ((frame->flags & CAN_FRAME_IDE) == 0U) && frame->id == DM_TX_ID;
 }
 
+static bool match_dm_enable_tx(const struct can_frame *frame)
+{
+	static const uint8_t dm_enable_frame[CAN_MAX_DLEN] = {
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFC,
+	};
+
+	return match_dm_tx(frame) && frame->dlc == CAN_MAX_DLEN &&
+	       memcmp(frame->data, dm_enable_frame, sizeof(dm_enable_frame)) == 0;
+}
+
 static bool match_mi_tx(const struct can_frame *frame)
 {
 	return ((frame->flags & CAN_FRAME_IDE) != 0U) && ((frame->id & 0xFFU) == MI_ID);
@@ -1422,6 +1432,21 @@ ZTEST(motor_driver_sim, test_rs_online_reset_state_retries_enable)
 
 	sim_reset_tx_history();
 	wait_for_tx_after(0, match_rs_enable_tx, "RS online reset enable retry");
+}
+
+ZTEST(motor_driver_sim, test_dm_online_disabled_state_retries_enable)
+{
+	driver_motor_control(DM_DEV, DISABLE_MOTOR);
+	emit_dm_feedback_enabled(false);
+	expect_online(DM_DEV, true, "DM");
+	expect_status_enabled(DM_DEV, false, "DM");
+
+	driver_motor_control(DM_DEV, ENABLE_MOTOR);
+	expect_requested_enabled(DM_DEV, true, "DM");
+	expect_status_enabled(DM_DEV, false, "DM");
+
+	sim_reset_tx_history();
+	wait_for_tx_after(0, match_dm_enable_tx, "DM online disabled enable retry");
 }
 
 ZTEST(motor_driver_sim, test_continuous_command_packing_order_and_latency)
