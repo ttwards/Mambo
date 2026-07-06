@@ -10,6 +10,8 @@
 头文件：`include/zephyr/drivers/motor.h`
 
 Motor API 将不同厂商的旋转电机统一为 `set/get/control` 三类应用操作。
+控制器类型、参数、选择与内置计算辅助位于
+`include/zephyr/drivers/motor/controller.h`；`motor.h` 会继续包含该头文件以保持兼容。
 
 #### 类型
 
@@ -54,6 +56,8 @@ Motor API 将不同厂商的旋转电机统一为 `set/get/control` 三类应用
 | `motor_get_mode(dev)` | 读取当前模式。 |
 
 #### 控制器函数
+
+头文件：`include/zephyr/drivers/motor/controller.h`
 
 | 接口 | 说明 |
 | --- | --- |
