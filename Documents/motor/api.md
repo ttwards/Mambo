@@ -1,5 +1,8 @@
 # 电机驱动 API
 
+应用入口头文件是 `include/zephyr/drivers/motor.h`。控制器类型、参数、选择函数和内置计算辅助
+位于 `include/zephyr/drivers/motor/controller.h`；`motor.h` 会继续包含该头文件以保持既有代码兼容。
+
 电机接口分成三层语义：
 
 - `motor_setpoint_t`: 用户下发的目标设定。

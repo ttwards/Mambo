@@ -39,6 +39,7 @@ Zephyr 设备模型、devicetree 与 Kconfig 组合这些模块。
 路径：
 
 - `include/zephyr/drivers/motor.h`
+- `include/zephyr/drivers/motor/controller.h`
 - `drivers/motor/`
 - `dts/bindings/motor/`
 - `dts/bindings/motor-controller/`
