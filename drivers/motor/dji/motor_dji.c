@@ -102,7 +102,7 @@ static int index_to_frameID(int frames_id)
  * @param value 要转换的浮点数。
  * @return 转换后的 int16_t 值。
  */
-static int16_t to16t(float value)
+static int16_t float_to_int16(float value)
 {
 	// 溢出处理
 	if (value > INT16_MAX) {
@@ -564,7 +564,7 @@ static void can_pack_add(uint8_t *data, struct device *motor_dev, uint8_t num)
 	struct dji_motor_data *motor_data = motor_dev->data;
 	const struct dji_motor_config *cfg = motor_dev->config;
 
-	int16_t value = to16t(motor_data->target_current);
+	int16_t value = float_to_int16(motor_data->target_current);
 
 	if (!cfg->is_dm_motor) {
 		data[num * 2] = HIGH_BYTE(value);
