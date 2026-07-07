@@ -365,8 +365,8 @@ void lk_tx_data_handler(struct k_work *work)
 					tx_frame.flags = 0;
 					tx_frame.data[0] = LK_CMD_MOTOR_RUN;
 					motor_can_sched_send_with_priority(
-						cfg->common.phy, &tx_frame, MOTOR_CAN_SCHED_PRIO_CRITICAL,
-						"lk-retry-enable");
+						cfg->common.phy, &tx_frame,
+						MOTOR_CAN_SCHED_PRIO_CRITICAL, "lk-retry-enable");
 				}
 				continue;
 			}
@@ -376,9 +376,9 @@ void lk_tx_data_handler(struct k_work *work)
 				tx_frame.dlc = 8;
 				tx_frame.flags = 0;
 				tx_frame.data[0] = LK_CMD_MOTOR_RUN;
-				motor_can_sched_send_with_priority(
-					cfg->common.phy, &tx_frame, MOTOR_CAN_SCHED_PRIO_CRITICAL,
-					"lk-reenable");
+				motor_can_sched_send_with_priority(cfg->common.phy, &tx_frame,
+								   MOTOR_CAN_SCHED_PRIO_CRITICAL,
+								   "lk-reenable");
 				data->params_update[0] = true;
 				data->params_update[1] = true;
 				data->params_update[2] = true;
@@ -426,9 +426,9 @@ void lk_tx_params_data_handler(struct k_work *work)
 				int16_t kd_val = (int16_t)(data->params[0].k_d);
 				tx_frame.data[6] = kd_val & 0xFF;
 				tx_frame.data[7] = (kd_val >> 8) & 0xFF;
-				motor_can_sched_send_with_priority(
-					cfg->common.phy, &tx_frame, MOTOR_CAN_SCHED_PRIO_CRITICAL,
-					"lk-param-angle");
+				motor_can_sched_send_with_priority(cfg->common.phy, &tx_frame,
+								   MOTOR_CAN_SCHED_PRIO_CRITICAL,
+								   "lk-param-angle");
 			}
 			k_sleep(K_USEC(120));
 			if (data->params_update[1]) {
@@ -448,9 +448,9 @@ void lk_tx_params_data_handler(struct k_work *work)
 				int16_t kd_val = (int16_t)(data->params[1].k_d);
 				tx_frame.data[6] = kd_val & 0xFF;
 				tx_frame.data[7] = (kd_val >> 8) & 0xFF;
-				motor_can_sched_send_with_priority(
-					cfg->common.phy, &tx_frame, MOTOR_CAN_SCHED_PRIO_CRITICAL,
-					"lk-param-speed");
+				motor_can_sched_send_with_priority(cfg->common.phy, &tx_frame,
+								   MOTOR_CAN_SCHED_PRIO_CRITICAL,
+								   "lk-param-speed");
 			}
 			k_sleep(K_USEC(120));
 			if (data->params_update[2]) {
@@ -470,9 +470,9 @@ void lk_tx_params_data_handler(struct k_work *work)
 				int16_t kd_val = (int16_t)(data->params[2].k_d);
 				tx_frame.data[6] = kd_val & 0xFF;
 				tx_frame.data[7] = (kd_val >> 8) & 0xFF;
-				motor_can_sched_send_with_priority(
-					cfg->common.phy, &tx_frame, MOTOR_CAN_SCHED_PRIO_CRITICAL,
-					"lk-param-torque");
+				motor_can_sched_send_with_priority(cfg->common.phy, &tx_frame,
+								   MOTOR_CAN_SCHED_PRIO_CRITICAL,
+								   "lk-param-torque");
 			}
 			k_sleep(K_USEC(120));
 		}

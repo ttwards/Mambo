@@ -351,9 +351,9 @@ void mi_tx_data_handler(struct k_work *work)
 						   0x1F00FF00, 5U, "mi-control");
 
 			if ((data->common.mode == PV) || (data->common.mode == VO)) {
-				motor_can_sched_send_with_priority(
-					cfg->common.phy, &tx_frame[1], MOTOR_CAN_SCHED_PRIO_CRITICAL,
-					"mi-follow");
+				motor_can_sched_send_with_priority(cfg->common.phy, &tx_frame[1],
+								   MOTOR_CAN_SCHED_PRIO_CRITICAL,
+								   "mi-follow");
 			}
 		}
 		if (i % 2 == 1) {
