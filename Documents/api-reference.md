@@ -190,7 +190,6 @@ PID 接口是旧版控制器工具。Motor 新 controller 不依赖该公共 API
 | `motor_can_sched_register_can(can_dev)` | 注册一个 CAN 设备。 | `0` 成功，负 errno 失败。 |
 | `motor_can_sched_send(can_dev, frame, param, handle_out)` | 通用发送入口，可配置周期、应答追踪与优先级。 | `0` 成功，负 errno 失败。 |
 | `motor_can_sched_send_with_priority(can_dev, frame, priority, tag)` | 按明确优先级发送单帧。 | `0` 成功，负 errno 失败。 |
-| `motor_can_sched_send_prio(can_dev, frame, high_priority, tag)` | 发送单帧，高优先级布尔入口。 | `0` 成功，负 errno 失败。 |
 | `motor_can_sched_send_reply(can_dev, frame, reply_id, reply_mask, timeout_ms, tag)` | 发送请求回复帧。 | `0` 成功，负 errno 失败。 |
 | `motor_can_sched_update(handle, frame)` | 更新周期帧内容。 | `0` 成功，负 errno 失败。 |
 | `motor_can_sched_remove(handle)` | 删除周期帧。 | `0` 成功，负 errno 失败。 |
@@ -305,6 +304,29 @@ PID 接口是旧版控制器工具。Motor 新 controller 不依赖该公共 API
 | `DUAL_PROPOSE_PROTOCOL_DEFINE(name)` | 定义 Dual Protocol 实例。 |
 
 Dual Protocol 支持函数帧、同步帧、错误帧与回复帧。协议常量定义在同一头文件中。
+
+### MQTT-like 协议
+
+头文件：`include/ares/protocol/mqttlite/mqttlite_protocol.h`
+
+| 接口 | 说明 |
+| --- | --- |
+| `ares_mqttlite_register_topic(protocol, topic_id, topic)` | 注册本地 topic id 映射。 |
+| `ares_mqttlite_subscribe(protocol, topic_filter, cb, user_data)` | 注册本地 topic 订阅回调。 |
+| `ares_mqttlite_subscribe_id(protocol, topic_id, cb, user_data)` | 按已约定 topic id 注册本地订阅回调。 |
+| `ares_mqttlite_unsubscribe(protocol, topic_filter)` | 移除本地 topic 订阅。 |
+| `ares_mqttlite_unsubscribe_id(protocol, topic_id)` | 移除本地 topic id 订阅。 |
+| `ares_mqttlite_publish(protocol, topic, payload, payload_len, qos, cb, user_data)` | 发布消息，QoS1/QoS2 成功时返回 packet id。 |
+| `ares_mqttlite_publish_id(protocol, topic_id, payload, payload_len, qos, cb, user_data)` | 使用 2 字节 topic id 发布消息。 |
+| `ares_mqttlite_publish_prepare_id(protocol, topic_id, payload_len, pub)` | 准备 QoS0 topic-id 零拷贝发布缓冲。 |
+| `ares_mqttlite_publish_commit(protocol, pub)` | 发送已填充的零拷贝发布缓冲。 |
+| `ares_mqttlite_publish_abort(pub)` | 释放未提交的零拷贝发布缓冲。 |
+| `ares_mqttlite_ping(protocol)` | 发送 PING 帧。 |
+| `ARES_MQTTLITE_PROTOCOL_DEFINE(name)` | 定义 MQTT-like 协议实例。 |
+
+协议支持 `ARES_MQTTLITE_QOS0`、`ARES_MQTTLITE_QOS1` 与 `ARES_MQTTLITE_QOS2`。QoS1 使用
+`PUBLISH/PUBACK`，QoS2 使用 `PUBLISH/PUBREC/PUBREL/PUBCOMP`。payload 是变长字段，长度由每帧
+header 携带，并受 `CONFIG_ARES_MQTTLITE_MAX_PAYLOAD_SIZE` 限制。
 
 ### Plotter 协议
 

@@ -1,11 +1,12 @@
 # Communication 样例
 
-通信样例分为 `ARES 通信` 与 `Plotter 协议` 两条线，覆盖 USB Bulk、UART 接口和日志输出行为。
+通信样例分为 `ARES 通信`、`MQTT-like USB` 与 `Plotter 协议` 几条线，覆盖 USB Bulk、UART
+接口和日志输出行为。
 
 ## 共同边界
 
 - `CONFIG_UART_INTERFACE` 与 `CONFIG_USB_BULK_INTERFACE` 在各样例中的组合不同，须按 `boards/*` 与 `prj.conf` 一起确认。
-- 示例流程以 `CONFIG_DUAL_PROPOSE_PROTOCOL` 或 `CONFIG_PLOTTER` 启用为入口，接口初始化失败时通常会跳过失败通道并继续运行。
+- 示例流程以 `CONFIG_DUAL_PROPOSE_PROTOCOL`、`CONFIG_ARES_MQTTLITE_PROTOCOL` 或 `CONFIG_PLOTTER` 启用为入口，接口初始化失败时通常会跳过失败通道并继续运行。
 - 上位机联调前先确认 `usart6` 与 USB OTG 物理连接。
 
 ## samples/communication/ares_communication
@@ -23,6 +24,20 @@
 - 维护规则：
   - 若新增板适配，先确认 `boards/<board>.conf` 是否覆盖了 `CONFIG_UART_INTERFACE`。
   - 回调函数语义（`func_cb` / `sync_cb` / `func_ret_cb`）变化需同步示例文档与接收端联调脚本。
+
+## samples/communication/mqttlite_usb
+
+- 用途：MQTT-like 协议的 USB Bulk 发布/订阅演示，周期通过 topic-id 零拷贝路径发布 QoS0 heartbeat，并按 id 订阅 `host/command`。
+- 构建：
+  - `west build -b dm_mc02 samples/communication/mqttlite_usb --pristine`
+  - `west flash`
+- 适用 board：`dm_mc02`
+- 硬件依赖：
+  - USB 设备能力
+  - 兼容 MQTT-like 帧格式的上位机
+- 维护规则：
+  - QoS 行为变化需同步 `include/ares/protocol/mqttlite/mqttlite_protocol.h` 和协议文档。
+  - topic 名称变化需同步上位机接收端。
 
 ## samples/communication/plotter_auto
 

@@ -1010,17 +1010,6 @@ int motor_can_sched_send(const struct device *can_dev, const struct can_frame *f
 	return 0;
 }
 
-int motor_can_sched_send_prio(const struct device *can_dev, const struct can_frame *frame,
-			      bool high_priority, const char *tag)
-{
-	const struct motor_can_sched_tx_param param = {
-		.high_priority = high_priority,
-		.tag = tag,
-	};
-
-	return motor_can_sched_send(can_dev, frame, &param, NULL);
-}
-
 int motor_can_sched_send_with_priority(const struct device *can_dev, const struct can_frame *frame,
 				       enum motor_can_sched_prio priority, const char *tag)
 {

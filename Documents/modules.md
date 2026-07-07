@@ -156,7 +156,7 @@ Graph 当前承载 INSLink 相关代码。该目录并非通用图形库，维�
 - `include/ares/protocol/`
 - `lib/ares/protocol/`
 
-协议层是帧解析和业务分发层，目前包含 Dual Protocol 与 Plotter Protocol。
+协议层是帧解析和业务分发层，目前包含 Dual Protocol、MQTT-like Protocol 与 Plotter Protocol。
 
 ### ARES 通信（ARES Comm）
 

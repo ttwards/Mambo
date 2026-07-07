@@ -61,6 +61,8 @@ Motor 子系统的调度和节拍选项：
 | `CONFIG_ARES` | 启用 ARES 库菜单。 |
 | `CONFIG_UART_INTERFACE` | 启用 UART 接口。 |
 | `CONFIG_USB_BULK_INTERFACE` | 启用 USB Bulk 接口。 |
+| `CONFIG_ARES_MQTTLITE_PROTOCOL` | 启用 MQTT-like 发布/订阅协议。 |
+| `CONFIG_ARES_MQTTLITE_MAX_TOPICS` | 设置 MQTT-like topic id 注册数量上限。 |
 | `CONFIG_ARES_BOARD_STATUS_LED` | 启用板级状态 LED 服务。 |
 | `CONFIG_IMU_PWM_TEMP_CTRL` | 启用 IMU PWM 温控。 |
 | `CONFIG_AUTO_PROBE_GYRO_BIAS` | 启用陀螺偏置自动探测。 |

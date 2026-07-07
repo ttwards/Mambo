@@ -342,7 +342,9 @@ void dji_control(const struct device *dev, enum motor_cmd cmd)
 			frame.data[1] = (cfg->common.rx_id - 0x200) >> 8;
 			frame.data[2] = 0x55;
 			frame.data[3] = 0x3C;
-			motor_can_sched_send_prio(cfg->common.phy, &frame, true, "dji-set-zero");
+			motor_can_sched_send_with_priority(cfg->common.phy, &frame,
+							   MOTOR_CAN_SCHED_PRIO_CRITICAL,
+							   "dji-set-zero");
 		}
 		break;
 	case CLEAR_CONTROLLER:
@@ -357,7 +359,9 @@ void dji_control(const struct device *dev, enum motor_cmd cmd)
 			frame.data[1] = (cfg->common.rx_id - 0x200) >> 8;
 			frame.data[2] = 0x55;
 			frame.data[3] = 0x50;
-			motor_can_sched_send_prio(cfg->common.phy, &frame, true, "dji-clear-error");
+			motor_can_sched_send_with_priority(cfg->common.phy, &frame,
+							   MOTOR_CAN_SCHED_PRIO_CRITICAL,
+							   "dji-clear-error");
 		}
 		break;
 	}
@@ -790,8 +794,9 @@ void dji_tx_handler(struct k_work *work)
 				txframe.dlc = 8;
 				txframe.flags = 0;
 				const struct device *can_dev = ctrl_struct->can_dev;
-				motor_can_sched_send_prio(can_dev, &txframe, true,
-							  "dji-feedback-control");
+				motor_can_sched_send_with_priority(can_dev, &txframe,
+								   MOTOR_CAN_SCHED_PRIO_CRITICAL,
+								   "dji-feedback-control");
 			}
 		}
 	}

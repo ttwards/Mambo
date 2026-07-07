@@ -147,7 +147,7 @@ UART 异步回调收到 `UART_RX_RDY` 后：
 这一设计保证了单通道串口发送有统一仲裁点，避免多个上下文直接打到底层驱动。
 
 `ares_uart_send_raw()` 则是例外，它直接调用 `uart_tx()`，更适合 plotter/VOFA 这种自带帧组装、
-不依赖 `net_buf` 的快速路径。
+不依赖 `net_buf` 的快速路径。UART 接口没有实现 `alloc_buf_with_data()`。
 
 ### 配置项
 
@@ -200,7 +200,10 @@ USB bulk 接口适合：
 
 - `ares_usbd_init(struct AresInterface *interface)`
 - `ares_usbd_write(struct AresInterface *interface, struct net_buf *buf)`
-- `ares_usbd_write_with_lock(struct AresInterface *interface, struct net_buf *buf, struct k_mutex *mutex)`
+- `ares_usbd_write_with_callback(struct AresInterface *interface, struct net_buf *buf,
+  ares_interface_tx_done_cb_t cb, void *user_data)`
+- `ares_usbd_caps(struct AresInterface *interface)`
+- `ares_usbd_mtu(struct AresInterface *interface)`
 - `ares_interface_alloc_buf(struct AresInterface *interface)`
 - `ares_interface_alloc_buf_with_data(struct AresInterface *interface, void *data, size_t len)`
 
@@ -248,20 +251,24 @@ OUT 端点启用后会持续预投递读请求。收到数据后：
 
 #### 发送
 
-发送调用 `ares_usbd_write()` 或 `ares_usbd_write_with_lock()`：
+发送调用 `ares_usbd_write()` 或 `ares_usbd_write_with_callback()`：
 
 1. 检查 USB class 和接口状态。
 2. 检查 IN 端点是否已有在飞事务。
-3. 在 `net_buf` 用户区写入端点与互斥信息。
+3. 在 `net_buf` 用户区写入端点与完成回调信息。
 4. 调用 `usbd_ep_enqueue()`。
 
-发送完成后，request handler 清除 IN engaged 状态，并通过 buffer 回调释放 `net_buf`；
-若附带互斥锁，还会在缓冲释放回调中解锁。
+发送完成后，request handler 清除 IN engaged 状态，调用发送完成回调并释放 `net_buf`。同步入队失败时，
+USB 层也会调用完成回调并释放缓冲。
+
+USB bulk 接口没有实现 `send_raw()` 与 `connect()` / `disconnect()` / `is_connected()`。连接状态通过
+USBD 消息转换为协议事件，而不是通过 `AresInterfaceAPI` 查询。
 
 ### `alloc_buf_with_data()` 的作用
 
-双向协议会优先使用 `alloc_buf_with_data()`。对 USB 来说，这允许直接把现成帧数据包装成
-发送缓冲，减少一次显式拷贝。维护者修改协议发送路径时，应保留这种能力协商。
+双向协议会优先使用 `alloc_buf_with_data()`。对 USB 来说，这允许用现成帧数据创建发送缓冲，减少协议层
+显式拷贝。维护者修改协议发送路径时，应保留这种能力协商，并为没有该能力的接口保留
+`alloc_buf()` + `net_buf_add_mem()` fallback。
 
 ### 协议事件
 

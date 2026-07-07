@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+
+sample:
+  name: ARES MQTT-like USB Bulk
+tests:
+  sample.communication.mqttlite_usb:
+    tags:
+      - ares
+      - communication
+      - usb
+    platform_allow:
+      - dm_mc02
+    integration_platforms:
+      - dm_mc02

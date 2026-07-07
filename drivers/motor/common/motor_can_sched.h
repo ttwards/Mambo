@@ -104,8 +104,6 @@ int motor_can_sched_send(const struct device *can_dev, const struct can_frame *f
 			 motor_can_sched_handle_t *handle_out);
 int motor_can_sched_send_with_priority(const struct device *can_dev, const struct can_frame *frame,
 				       enum motor_can_sched_prio priority, const char *tag);
-int motor_can_sched_send_prio(const struct device *can_dev, const struct can_frame *frame,
-			      bool high_priority, const char *tag);
 int motor_can_sched_send_reply(const struct device *can_dev, const struct can_frame *frame,
 			       uint32_t reply_id, uint32_t reply_mask, uint16_t timeout_ms,
 			       const char *tag);

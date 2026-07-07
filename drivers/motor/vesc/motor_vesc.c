@@ -109,7 +109,8 @@ static void vesc_send_ping(const struct device *dev)
 	frame.dlc = 1;
 	frame.data[0] = cfg->common.rx_id & 0xFF;
 
-	motor_can_sched_send_prio(cfg->common.phy, &frame, true, "vesc-ping");
+	motor_can_sched_send_with_priority(cfg->common.phy, &frame, MOTOR_CAN_SCHED_PRIO_CRITICAL,
+					   "vesc-ping");
 }
 
 static int vesc_send_control(const struct device *dev)
