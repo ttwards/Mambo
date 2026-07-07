@@ -3,7 +3,7 @@
 #include "zephyr/kernel.h"
 #include "zephyr/net_buf.h"
 #include <zephyr/logging/log.h>
-#include <sys/errno.h>
+#include <errno.h>
 #include "ares/interface/ares_interface.h"
 #include <stdint.h>
 
@@ -357,7 +357,7 @@ static void parse_func(struct AresProtocol *protocol, func_table_t *map)
 	GET_16BITS(repl_frame, REPL_HEAD_IDX) = REPL_FRAME_HEAD;
 	GET_16BITS(repl_frame, REPL_FUNC_ID_IDX) = map->id;
 	GET_32BITS(repl_frame, REPL_RET_IDX) = (uint32_t)ret;
-	GET_8BITS(repl_frame, REPL_REQ_ID_IDX) = map->req_id;
+	GET_16BITS(repl_frame, REPL_REQ_ID_IDX) = map->req_id;
 
 	size_t frame_len = REPL_FRAME_LENGTH;
 	if (data->crc_enabled) {

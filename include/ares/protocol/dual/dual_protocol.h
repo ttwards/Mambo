@@ -209,19 +209,6 @@ int dual_sync_flush(struct AresProtocol *protocol, sync_table_t *pack);
 	};                                                                                         \
 	struct dual_protocol_data Protocol_name##_data = {                                         \
 		.name = #Protocol_name,                                                            \
-		.heart_beat_timer = {0},                                                           \
-		.err_frame_mutex = {0},                                                            \
-		.func_cnt = 0,                                                                     \
-		.sync_cnt = 0,                                                                     \
-		.func_tx_bckup_msgq = {0},                                                         \
-		.online = false,                                                                   \
-		.func_tx_bckup_cnt = 0,                                                            \
-		.state = PARSER_STATE_IDLE,                                                        \
-		.current_frame_type = FRAME_TYPE_UNKNOWN,                                          \
-		.rx_buffer_pos = 0,                                                                \
-		.expected_frame_length = 0,                                                        \
-		.header_value = 0,                                                                 \
-		.crc_enabled = false,                                                              \
 	};                                                                                         \
 	struct AresProtocol Protocol_name = {                                                      \
 		.name = #Protocol_name,                                                            \
@@ -238,18 +225,6 @@ int dual_sync_flush(struct AresProtocol *protocol, sync_table_t *pack);
 	};                                                                                         \
 	struct dual_protocol_data Protocol_name##_data = {                                         \
 		.name = #Protocol_name,                                                            \
-		.heart_beat_timer = {0},                                                           \
-		.err_frame_mutex = {0},                                                            \
-		.func_cnt = 0,                                                                     \
-		.sync_cnt = 0,                                                                     \
-		.func_tx_bckup_msgq = {0},                                                         \
-		.online = false,                                                                   \
-		.func_tx_bckup_cnt = 0,                                                            \
-		.state = PARSER_STATE_IDLE,                                                        \
-		.current_frame_type = FRAME_TYPE_UNKNOWN,                                          \
-		.rx_buffer_pos = 0,                                                                \
-		.expected_frame_length = 0,                                                        \
-		.header_value = 0,                                                                 \
 		.crc_enabled = true,                                                               \
 	};                                                                                         \
 	struct AresProtocol Protocol_name = {                                                      \
