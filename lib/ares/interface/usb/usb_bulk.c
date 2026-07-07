@@ -46,6 +46,7 @@ static struct AresInterface *ares_interface;
 #define ARES_IF_FUNCTION_ENABLED     0
 #define ARES_IF_FUNCTION_OUT_ENGAGED 1
 #define ARES_IF_FUNCTION_IN_ENGAGED  2
+#define ARES_IF_FUNCTION_CONNECTED   3
 
 /* === USB Device and Descriptor Definitions === */
 
@@ -68,6 +69,7 @@ USBD_CONFIGURATION_DEFINE(ares_hs_config, attributes, 250, &hs_cfg_desc);
 
 // Forward declaration
 struct usbd_class_data *ares_if_class_data;
+static void ares_usbd_protocol_event(enum AresProtocolEvent event);
 
 struct ares_if_desc {
 	struct usb_if_descriptor if0;
@@ -84,6 +86,38 @@ struct ares_if_data {
 	const struct usb_desc_header **const hs_desc;
 	atomic_t state;
 };
+
+struct ares_udc_buf_info {
+	struct udc_buf_info udc_buf_info;
+	ares_interface_tx_done_cb_t tx_done;
+	void *tx_user_data;
+};
+
+static void ares_usbd_set_connected(struct usbd_class_data *const c_data, bool connected)
+{
+	struct ares_if_data *data;
+
+	if (c_data == NULL) {
+		return;
+	}
+
+	data = usbd_class_get_private(c_data);
+	if (data == NULL) {
+		return;
+	}
+
+	if (connected) {
+		if (!atomic_test_bit(&data->state, ARES_IF_FUNCTION_ENABLED)) {
+			return;
+		}
+
+		if (!atomic_test_and_set_bit(&data->state, ARES_IF_FUNCTION_CONNECTED)) {
+			ares_usbd_protocol_event(ARES_PROTOCOL_EVENT_CONNECTED);
+		}
+	} else if (atomic_test_and_clear_bit(&data->state, ARES_IF_FUNCTION_CONNECTED)) {
+		ares_usbd_protocol_event(ARES_PROTOCOL_EVENT_DISCONNECTED);
+	}
+}
 
 static uint8_t ares_if_get_bulk_out(struct usbd_class_data *const c_data)
 {
@@ -167,6 +201,10 @@ static int ares_if_request_handler(struct usbd_class_data *const c_data, struct 
 
 	if (ep == ares_if_get_bulk_in(c_data)) {
 		atomic_clear_bit(&data->state, ARES_IF_FUNCTION_IN_ENGAGED);
+		struct ares_udc_buf_info *buf_info = net_buf_user_data(buf);
+		if (buf_info && buf_info->tx_done) {
+			buf_info->tx_done(ares_interface, buf, err_code, buf_info->tx_user_data);
+		}
 		net_buf_unref(buf);
 
 		/*
@@ -262,13 +300,19 @@ static void *ares_if_get_desc(struct usbd_class_data *const c_data, const enum u
 static void ares_if_enable(struct usbd_class_data *const c_data)
 {
 	struct ares_if_data *data = usbd_class_get_private(c_data);
+	int err;
+
 	LOG_INF("Enable ARES Bulk interface");
 	if (atomic_test_and_set_bit(&data->state, ARES_IF_FUNCTION_ENABLED)) {
 		return;
 	}
-	if (ares_if_submit_bulk_out(c_data) != 0) {
+	err = ares_if_submit_bulk_out(c_data);
+	if (err != 0) {
 		LOG_ERR("Failed to submit initial bulk OUT request on enable");
+		return;
 	}
+
+	ares_usbd_set_connected(c_data, true);
 }
 
 static void ares_if_disable(struct usbd_class_data *const c_data)
@@ -277,6 +321,8 @@ static void ares_if_disable(struct usbd_class_data *const c_data)
 	struct net_buf *buf;
 
 	LOG_INF("Disable ARES Bulk interface");
+	ares_usbd_set_connected(c_data, false);
+
 	atomic_clear_bit(&data->state, ARES_IF_FUNCTION_ENABLED);
 	atomic_clear_bit(&data->state, ARES_IF_FUNCTION_IN_ENGAGED);
 	atomic_clear_bit(&data->state, ARES_IF_FUNCTION_OUT_ENGAGED);
@@ -337,11 +383,6 @@ static void ares_processing_thread_entry(void *p1, void *p2, void *p3)
 
 /* === Public API and Setup Function === */
 
-struct ares_udc_buf_info {
-	struct udc_buf_info udc_buf_info;
-	struct k_mutex *mutex;
-} __attribute__((packed));
-
 static const char *const ares_usbd_bulk_first_blocklist[] = {
 	"ares_if_0",
 	NULL,
@@ -350,18 +391,14 @@ static const char *const ares_usbd_bulk_first_blocklist[] = {
 /* To send data, we can allocate from the general-purpose system pool */
 void buf_cb_unlock(struct net_buf *buf)
 {
-	struct ares_udc_buf_info *buf_info = net_buf_user_data(buf);
-	if (buf_info->mutex) {
-		LOG_DBG("Unlocking mutex %p", buf_info->mutex);
-		k_mutex_unlock(buf_info->mutex);
-	}
 	LOG_DBG("Destroying buffer %p", buf);
 	net_buf_destroy(buf);
 }
 
 UDC_BUF_POOL_DEFINE(tx_pool, 8, 512, sizeof(struct ares_udc_buf_info), buf_cb_unlock);
 
-int ares_usbd_write(struct AresInterface *interface, struct net_buf *buf)
+static int ares_usbd_write_common(struct AresInterface *interface, struct net_buf *buf,
+				  ares_interface_tx_done_cb_t cb, void *user_data)
 {
 	struct usbd_class_data *c_data = ares_if_class_data;
 	struct ares_if_data *data = NULL;
@@ -388,7 +425,8 @@ int ares_usbd_write(struct AresInterface *interface, struct net_buf *buf)
 
 	struct ares_udc_buf_info *buf_info = net_buf_user_data(buf);
 	if (buf_info) {
-		buf_info->mutex = NULL;
+		buf_info->tx_done = cb;
+		buf_info->tx_user_data = user_data;
 		buf_info->udc_buf_info.ep = ares_if_get_bulk_in(c_data);
 	}
 
@@ -397,6 +435,9 @@ int ares_usbd_write(struct AresInterface *interface, struct net_buf *buf)
 		atomic_clear_bit(&data->state, ARES_IF_FUNCTION_IN_ENGAGED);
 		LOG_ERR("Enqueue error %d", err);
 clear_exit:
+		if (cb) {
+			cb(interface, buf, err, user_data);
+		}
 		net_buf_unref(buf);
 	} else {
 		LOG_DBG("Enqueueing buffer %p", buf);
@@ -404,48 +445,35 @@ clear_exit:
 	return err;
 }
 
-int ares_usbd_write_with_lock(struct AresInterface *interface, struct net_buf *buf,
-			      struct k_mutex *mutex)
+int ares_usbd_write(struct AresInterface *interface, struct net_buf *buf)
+{
+	return ares_usbd_write_common(interface, buf, NULL, NULL);
+}
+
+int ares_usbd_write_with_callback(struct AresInterface *interface, struct net_buf *buf,
+				  ares_interface_tx_done_cb_t cb, void *user_data)
+{
+	return ares_usbd_write_common(interface, buf, cb, user_data);
+}
+
+uint32_t ares_usbd_caps(struct AresInterface *interface)
+{
+	ARG_UNUSED(interface);
+
+	return ARES_INTERFACE_CAP_PACKET | ARES_INTERFACE_CAP_ZERO_COPY |
+	       ARES_INTERFACE_CAP_TX_COMPLETE;
+}
+
+size_t ares_usbd_mtu(struct AresInterface *interface)
 {
 	struct usbd_class_data *c_data = ares_if_class_data;
-	struct ares_if_data *data = NULL;
-	int err;
+
+	ARG_UNUSED(interface);
 
 	if (c_data == NULL) {
-		err = -ENODEV;
-		goto clear_exit;
+		return 64U;
 	}
-
-	data = usbd_class_get_private(c_data);
-	if (data == NULL) {
-		err = -EINVAL;
-		goto clear_exit;
-	}
-	if (!atomic_test_bit(&data->state, ARES_IF_FUNCTION_ENABLED)) {
-		err = -EPERM;
-		goto clear_exit;
-	}
-	if (atomic_test_and_set_bit(&data->state, ARES_IF_FUNCTION_IN_ENGAGED)) {
-		err = -EBUSY;
-		goto clear_exit;
-	}
-
-	struct ares_udc_buf_info *buf_info = net_buf_user_data(buf);
-	if (buf_info) {
-		buf_info->mutex = mutex;
-		buf_info->udc_buf_info.ep = ares_if_get_bulk_in(c_data);
-	}
-
-	err = usbd_ep_enqueue(c_data, buf);
-	if (err) {
-		atomic_clear_bit(&data->state, ARES_IF_FUNCTION_IN_ENGAGED);
-		LOG_DBG("locked Enqueue error %d", err);
-clear_exit:
-		net_buf_unref(buf);
-	} else {
-		LOG_DBG("locked Enqueueing buffer %p", buf);
-	}
-	return err;
+	return ares_if_get_mps(c_data);
 }
 
 struct net_buf *ares_interface_alloc_buf(struct AresInterface *interface)
@@ -454,7 +482,8 @@ struct net_buf *ares_interface_alloc_buf(struct AresInterface *interface)
 	if (buf) {
 		struct ares_udc_buf_info *buf_info = net_buf_user_data(buf);
 		if (buf_info) {
-			buf_info->mutex = NULL;
+			buf_info->tx_done = NULL;
+			buf_info->tx_user_data = NULL;
 		}
 	}
 	return buf;
@@ -467,7 +496,8 @@ struct net_buf *ares_interface_alloc_buf_with_data(struct AresInterface *interfa
 	if (buf) {
 		struct ares_udc_buf_info *buf_info = net_buf_user_data(buf);
 		if (buf_info) {
-			buf_info->mutex = NULL;
+			buf_info->tx_done = NULL;
+			buf_info->tx_user_data = NULL;
 		}
 	}
 	return buf;
@@ -516,16 +546,16 @@ static void ares_usbd_msg_cb(struct usbd_context *const usbd_ctx, const struct u
 {
 	switch (msg->type) {
 	case USBD_STATE_CONFIGURED:
-		LOG_INF("USB device configured");
-		ares_usbd_protocol_event(ARES_PROTOCOL_EVENT_CONNECTED);
+		// LOG_INF("USB device configured");
+		ares_usbd_set_connected(ares_if_class_data, true);
 		break;
 	case USBD_MSG_RESET:
-		LOG_INF("USB device reset");
-		ares_usbd_protocol_event(ARES_PROTOCOL_EVENT_DISCONNECTED);
+		// LOG_INF("USB device reset");
+		ares_usbd_set_connected(ares_if_class_data, false);
 		break;
 	case USBD_MSG_SUSPEND:
 		LOG_INF("USB device suspended");
-		ares_usbd_protocol_event(ARES_PROTOCOL_EVENT_DISCONNECTED);
+		ares_usbd_set_connected(ares_if_class_data, false);
 		break;
 	default:
 		break;
