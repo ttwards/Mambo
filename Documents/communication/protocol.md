@@ -183,11 +183,12 @@ SYNC 帧长度不能仅靠帧头得知，必须在收到 ID 后查同步表长�
 
 双向协议的发送始终通过已绑定接口：
 
-- 优先使用 `alloc_buf_with_data()` 包装现成帧
+- 优先使用 `alloc_buf_with_data()` 用现成帧数据创建发送缓冲
 - 否则分配 `net_buf` 后复制数据
-- 若接口支持 `send_with_lock()`，则利用互斥保护在飞帧
+- 若需要知道 TX 完成，则使用 `send_with_callback()` 释放在飞状态
 
-这解释了为什么 USB 实现提供了 `send_with_lock()`，而 UART 没有。
+这解释了为什么 Dual 的 FUNC 回复和 SYNC 刷新会通过 `send_with_callback()` 等待 UART/USB
+传输完成，而不是在 `send()` 返回时立即允许下一帧复用同一 backing buffer。
 
 ### CRC
 

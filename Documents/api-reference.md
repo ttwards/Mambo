@@ -225,19 +225,22 @@ PID 接口是旧版控制器工具。Motor 新 controller 不依赖该公共 API
 
 头文件：`include/ares/interface/ares_interface.h`
 
-`struct AresInterfaceAPI` 是传输层驱动表：
+`struct AresInterfaceAPI` 是传输层能力表。不是每个接口都会实现所有回调，协议层调用前应检查函数
+指针是否为空。
 
-| 回调 | 说明 |
-| --- | --- |
-| `send(interface, buf)` | 发送一个 `net_buf`。 |
-| `send_with_lock(interface, buf, mutex)` | 在调用者给出的锁保护下发送。 |
-| `send_raw(interface, data, len)` | 发送原始字节。 |
-| `connect(interface)` | 建立连接。 |
-| `disconnect(interface)` | 断开连接。 |
-| `is_connected(interface)` | 查询连接状态。 |
-| `alloc_buf(interface)` | 分配发送缓冲。 |
-| `alloc_buf_with_data(interface, data, size)` | 分配并填充发送缓冲。 |
-| `init(interface)` | 初始化接口对象。 |
+| 回调 | 说明 | 当前实现 |
+| --- | --- | --- |
+| `send(interface, buf)` | 发送一个 `net_buf`。调用后缓冲所有权交给接口。 | UART、USB bulk |
+| `send_with_callback(interface, buf, cb, user_data)` | 发送 `net_buf`，并在完成、中止或同步失败时通知调用者。 | UART、USB bulk |
+| `send_raw(interface, data, len)` | 发送原始字节，不使用 `net_buf`。 | UART |
+| `connect(interface)` | 建立连接。 | 预留，当前 UART/USB 未填 |
+| `disconnect(interface)` | 断开连接。 | 预留，当前 UART/USB 未填 |
+| `is_connected(interface)` | 查询连接状态。 | 预留，当前 UART/USB 未填 |
+| `caps(interface)` | 返回 `AresInterfaceCaps` 能力位。 | UART、USB bulk |
+| `mtu(interface)` | 返回接口建议帧长上限。 | UART、USB bulk |
+| `alloc_buf(interface)` | 分配发送缓冲。 | UART、USB bulk |
+| `alloc_buf_with_data(interface, data, size)` | 分配并携带现有数据块的发送缓冲。 | USB bulk |
+| `init(interface)` | 初始化接口对象。 | UART、USB bulk |
 
 `struct AresInterface` 包含名称、API、绑定的协议和传输私有数据。
 
@@ -262,9 +265,11 @@ PID 接口是旧版控制器工具。Motor 新 controller 不依赖该公共 API
 | --- | --- |
 | `ares_usbd_init(interface)` | 初始化 USB bulk 接口。 |
 | `ares_usbd_write(interface, buf)` | 发送 `net_buf`。 |
-| `ares_usbd_write_with_lock(interface, buf, mutex)` | 带外部锁发送。 |
+| `ares_usbd_write_with_callback(interface, buf, cb, user_data)` | 发送并通知 TX 完成状态。 |
+| `ares_usbd_caps(interface)` | 返回 USB bulk 能力位。 |
+| `ares_usbd_mtu(interface)` | 返回当前 USB 速度下的 bulk endpoint MPS。 |
 | `ares_interface_alloc_buf(interface)` | 分配发送缓冲。 |
-| `ares_interface_alloc_buf_with_data(interface, data, len)` | 分配并填充发送缓冲。 |
+| `ares_interface_alloc_buf_with_data(interface, data, len)` | 分配并携带现有数据块的发送缓冲。 |
 | `ARES_BULK_INTERFACE_DEFINE(name)` | 定义 USB bulk 接口实例。 |
 
 ### 协议层
