@@ -11,7 +11,7 @@
 
 Motor API 将不同厂商的旋转电机统一为 `set/get/control` 三类应用操作。
 控制器类型、参数、选择与内置计算辅助位于
-`include/zephyr/drivers/motor/controller.h`；`motor.h` 会继续包含该头文件以保持兼容。
+`include/zephyr/drivers/motor/controller.h`。
 
 #### 类型
 
@@ -190,7 +190,6 @@ PID 接口是旧版控制器工具。Motor 新 controller 不依赖该公共 API
 | `motor_can_sched_register_can(can_dev)` | 注册一个 CAN 设备。 | `0` 成功，负 errno 失败。 |
 | `motor_can_sched_send(can_dev, frame, param, handle_out)` | 通用发送入口，可配置周期、应答追踪与优先级。 | `0` 成功，负 errno 失败。 |
 | `motor_can_sched_send_with_priority(can_dev, frame, priority, tag)` | 按明确优先级发送单帧。 | `0` 成功，负 errno 失败。 |
-| `motor_can_sched_send_prio(can_dev, frame, high_priority, tag)` | 发送单帧，高优先级布尔入口。 | `0` 成功，负 errno 失败。 |
 | `motor_can_sched_send_reply(can_dev, frame, reply_id, reply_mask, timeout_ms, tag)` | 发送请求回复帧。 | `0` 成功，负 errno 失败。 |
 | `motor_can_sched_update(handle, frame)` | 更新周期帧内容。 | `0` 成功，负 errno 失败。 |
 | `motor_can_sched_remove(handle)` | 删除周期帧。 | `0` 成功，负 errno 失败。 |

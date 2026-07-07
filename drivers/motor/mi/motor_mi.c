@@ -75,12 +75,14 @@ void mi_motor_control(const struct device *dev, enum motor_cmd cmd)
 	switch (cmd) {
 	case ENABLE_MOTOR:
 		mi_can_id->mi_msg_mode = Communication_Type_MotorEnable;
-		motor_can_sched_send_prio(cfg->common.phy, &frame, true, "mi-enable");
+		motor_can_sched_send_with_priority(cfg->common.phy, &frame,
+						   MOTOR_CAN_SCHED_PRIO_CRITICAL, "mi-enable");
 		motor_link_request_enable(&data->common.link);
 		break;
 	case DISABLE_MOTOR:
 		mi_can_id->mi_msg_mode = Communication_Type_MotorStop;
-		motor_can_sched_send_prio(cfg->common.phy, &frame, true, "mi-disable");
+		motor_can_sched_send_with_priority(cfg->common.phy, &frame,
+						   MOTOR_CAN_SCHED_PRIO_CRITICAL, "mi-disable");
 		motor_link_request_disable(&data->common.link);
 		break;
 	case SET_ZERO:
@@ -88,7 +90,8 @@ void mi_motor_control(const struct device *dev, enum motor_cmd cmd)
 		frame.data[0] = 0x01;
 		data->delta_deg_sum = 0;
 		data->common.angle = 0;
-		motor_can_sched_send_prio(cfg->common.phy, &frame, true, "mi-set-zero");
+		motor_can_sched_send_with_priority(cfg->common.phy, &frame,
+						   MOTOR_CAN_SCHED_PRIO_CRITICAL, "mi-set-zero");
 		break;
 
 	case CLEAR_CONTROLLER:
@@ -221,7 +224,8 @@ static int mi_apply_controller_mode(const struct device *dev, enum motor_mode mo
 	memcpy(&frame.data[0], &index, 2);
 
 	frame.data[4] = (uint8_t)mode;
-	motor_can_sched_send_prio(cfg->common.phy, &frame, true, "mi-set-mode");
+	motor_can_sched_send_with_priority(cfg->common.phy, &frame, MOTOR_CAN_SCHED_PRIO_CRITICAL,
+					   "mi-set-mode");
 
 	for (int i = 0; i < motor_get_controller_count(dev); i++) {
 		const struct motor_controller_config *ctrl_cfg = &cfg->common.controllers[i];
@@ -347,8 +351,9 @@ void mi_tx_data_handler(struct k_work *work)
 						   0x1F00FF00, 5U, "mi-control");
 
 			if ((data->common.mode == PV) || (data->common.mode == VO)) {
-				motor_can_sched_send_prio(cfg->common.phy, &tx_frame[1], true,
-							  "mi-follow");
+				motor_can_sched_send_with_priority(
+					cfg->common.phy, &tx_frame[1], MOTOR_CAN_SCHED_PRIO_CRITICAL,
+					"mi-follow");
 			}
 		}
 		if (i % 2 == 1) {

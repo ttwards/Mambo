@@ -196,7 +196,6 @@ stateDiagram-v2
 | 接口 | 用途 |
 | --- | --- |
 | `motor_can_sched_register_can()` | 注册 CAN 设备。 |
-| `motor_can_sched_send_prio()` | 发送普通帧，可选高优先级。 |
 | `motor_can_sched_send_with_priority()` | 以明确优先级发送单帧。 |
 | `motor_can_sched_send_reply()` | 发送会触发回复的帧，并跟踪回复超时。 |
 | `motor_can_sched_send()` | 通用入口，支持周期帧和回复跟踪。 |

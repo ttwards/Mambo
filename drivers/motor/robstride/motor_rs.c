@@ -158,12 +158,14 @@ static void rs_send_enable_frame(const struct device *dev, const char *tag_prefi
 	frame.id = rs_pack_ext_id(Communication_Type_MotorStop, cfg->common.rx_id & 0xFF,
 				  cfg->common.tx_id & 0xFF, 0);
 	frame.data[0] = 0x01;
-	motor_can_sched_send_prio(cfg->common.phy, &frame, true, tag_prefix);
+	motor_can_sched_send_with_priority(cfg->common.phy, &frame, MOTOR_CAN_SCHED_PRIO_CRITICAL,
+					   tag_prefix);
 
 	frame.id = rs_pack_ext_id(Communication_Type_MotorEnable, cfg->common.rx_id & 0xFF,
 				  cfg->common.tx_id & 0xFF, 0);
 	frame.data[0] = 0x0;
-	motor_can_sched_send_prio(cfg->common.phy, &frame, true, "rs-enable");
+	motor_can_sched_send_with_priority(cfg->common.phy, &frame, MOTOR_CAN_SCHED_PRIO_CRITICAL,
+					   "rs-enable");
 }
 
 static void rs_send_auto_report_frame(const struct device *dev, const char *tag)
@@ -177,7 +179,8 @@ static void rs_send_auto_report_frame(const struct device *dev, const char *tag)
 
 	frame.id = rs_pack_ext_id(Communication_Type_MotorReport, cfg->common.rx_id & 0xFF,
 				  cfg->common.tx_id & 0xFF, 0);
-	motor_can_sched_send_prio(cfg->common.phy, &frame, true, tag);
+	motor_can_sched_send_with_priority(cfg->common.phy, &frame, MOTOR_CAN_SCHED_PRIO_CRITICAL,
+					   tag);
 }
 
 int rs_init(const struct device *dev)
@@ -241,7 +244,8 @@ void rs_motor_control(const struct device *dev, enum motor_cmd cmd)
 	case DISABLE_MOTOR:
 		frame.id = rs_pack_ext_id(Communication_Type_MotorStop, cfg->common.rx_id & 0xFF,
 					  cfg->common.tx_id & 0xFF, 0);
-		motor_can_sched_send_prio(cfg->common.phy, &frame, true, "rs-disable");
+		motor_can_sched_send_with_priority(cfg->common.phy, &frame,
+						   MOTOR_CAN_SCHED_PRIO_CRITICAL, "rs-disable");
 		motor_link_request_disable(&data->common.link);
 		break;
 	case SET_ZERO:
@@ -249,13 +253,15 @@ void rs_motor_control(const struct device *dev, enum motor_cmd cmd)
 					  cfg->common.tx_id & 0xFF, 0);
 		frame.data[0] = 0x01;
 		data->common.angle = 0;
-		motor_can_sched_send_prio(cfg->common.phy, &frame, true, "rs-set-zero");
+		motor_can_sched_send_with_priority(cfg->common.phy, &frame,
+						   MOTOR_CAN_SCHED_PRIO_CRITICAL, "rs-set-zero");
 		break;
 	case CLEAR_ERROR:
 		frame.id = rs_pack_ext_id(Communication_Type_MotorStop, cfg->common.rx_id & 0xFF,
 					  cfg->common.tx_id & 0xFF, 0);
 		frame.data[0] = 0x01;
-		motor_can_sched_send_prio(cfg->common.phy, &frame, true, "rs-clear-error");
+		motor_can_sched_send_with_priority(cfg->common.phy, &frame,
+						   MOTOR_CAN_SCHED_PRIO_CRITICAL, "rs-clear-error");
 		motor_link_request_disable(&data->common.link);
 		break;
 	case CLEAR_CONTROLLER:
@@ -323,7 +329,8 @@ static int rs_send_control_frame(const struct device *dev)
 	}
 
 	rs_motor_pack(dev, &tx_frame);
-	ret = motor_can_sched_send_prio(cfg->common.phy, &tx_frame, true, "rs-control");
+	ret = motor_can_sched_send_with_priority(cfg->common.phy, &tx_frame,
+						 MOTOR_CAN_SCHED_PRIO_CRITICAL, "rs-control");
 	if (ret < 0) {
 		motor_stats_inc(MOTOR_STAT_TX_ERROR);
 	}

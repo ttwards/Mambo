@@ -44,7 +44,7 @@ int motor_can_sched_register_can(const struct device *can_dev);
 - 周期控制帧默认使用 `NORMAL`。
 - 不要把所有帧都提升到高优先级，否则调度器失去意义。
 
-`motor_can_sched_send_prio()` 是较窄的便捷接口，只暴露“普通”与“高优先级”的常用路径。需要更细粒度控制时，使用 `motor_can_sched_send_with_priority()` 或通用 `motor_can_sched_send()`。
+单帧发送应使用 `motor_can_sched_send_with_priority()` 明确声明优先级；需要周期帧或回复跟踪时，使用通用 `motor_can_sched_send()`。
 
 ## 发送模型
 

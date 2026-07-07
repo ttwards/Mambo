@@ -93,7 +93,8 @@ static int dm_send_cmd_frame(const struct device *dev, const uint8_t data[8], co
 	};
 
 	memcpy(frame.data, data, 8);
-	return motor_can_sched_send_prio(cfg->common.phy, &frame, true, tag);
+	return motor_can_sched_send_with_priority(cfg->common.phy, &frame,
+						  MOTOR_CAN_SCHED_PRIO_CRITICAL, tag);
 }
 
 static int dm_send_cmd_frame_reply(const struct device *dev, const uint8_t data[8], const char *tag)
@@ -301,7 +302,7 @@ static void dm_edit_reg_value(const struct device *dev, uint16_t can_id, uint8_t
 	frame.data[5] = reg_value >> 8;
 	frame.data[6] = reg_value >> 16;
 	frame.data[7] = reg_value >> 24;
-	motor_can_sched_send_prio(dev, &frame, true, "dm-reg");
+	motor_can_sched_send_with_priority(dev, &frame, MOTOR_CAN_SCHED_PRIO_CRITICAL, "dm-reg");
 }
 
 static void dm_edit_reg_float(const struct device *dev, uint16_t can_id, uint8_t reg_addr,
