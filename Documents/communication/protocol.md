@@ -185,9 +185,10 @@ SYNC 帧长度不能仅靠帧头得知，必须在收到 ID 后查同步表长�
 
 - 优先使用 `alloc_buf_with_data()` 包装现成帧
 - 否则分配 `net_buf` 后复制数据
-- 若接口支持 `send_with_lock()`，则利用互斥保护在飞帧
+- 需要等待 TX 完成的 FUNC/同步帧使用 `send_with_callback()` 清理在飞状态
 
-这解释了为什么 USB 实现提供了 `send_with_lock()`，而 UART 没有。
+协议层不再依赖 USB 专用锁语义。UART 和 USB bulk 都通过 `ares_interface_tx_done_cb_t`
+报告发送完成、abort 或同步入队失败。
 
 ### CRC
 
