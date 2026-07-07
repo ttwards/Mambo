@@ -11,7 +11,7 @@
 
 Motor API 将不同厂商的旋转电机统一为 `set/get/control` 三类应用操作。
 控制器类型、参数、选择与内置计算辅助位于
-`include/zephyr/drivers/motor/controller.h`。
+`include/zephyr/drivers/motor/controller.h`；`motor.h` 会继续包含该头文件以保持兼容。
 
 #### 类型
 
@@ -226,12 +226,13 @@ PID 接口是旧版控制器工具。Motor 新 controller 不依赖该公共 API
 头文件：`include/ares/interface/ares_interface.h`
 
 `struct AresInterfaceAPI` 是传输层能力表。不是每个接口都会实现所有回调，协议层调用前应检查函数
-指针是否为空。
+指针是否为空。`send()` 与 `send_with_callback()` 调用后，`net_buf` 所有权交给接口；接口会在发送
+完成、发送中止或同步入队失败时释放缓冲。
 
 | 回调 | 说明 | 当前实现 |
 | --- | --- | --- |
-| `send(interface, buf)` | 发送一个 `net_buf`。调用后缓冲所有权交给接口。 | UART、USB bulk |
-| `send_with_callback(interface, buf, cb, user_data)` | 发送 `net_buf`，并在完成、中止或同步失败时通知调用者。 | UART、USB bulk |
+| `send(interface, buf)` | 发送一个 `net_buf`，不需要完成通知时使用。 | UART、USB bulk |
+| `send_with_callback(interface, buf, cb, user_data)` | 发送 `net_buf` 并在 TX 完成、abort 或同步失败时调用 `ares_interface_tx_done_cb_t`。 | UART、USB bulk |
 | `send_raw(interface, data, len)` | 发送原始字节，不使用 `net_buf`。 | UART |
 | `connect(interface)` | 建立连接。 | 预留，当前 UART/USB 未填 |
 | `disconnect(interface)` | 断开连接。 | 预留，当前 UART/USB 未填 |
@@ -252,8 +253,11 @@ PID 接口是旧版控制器工具。Motor 新 controller 不依赖该公共 API
 | --- | --- |
 | `ares_uart_init(interface)` | 初始化 UART 接口。 |
 | `ares_uart_send(interface, buf)` | 发送 `net_buf`。 |
+| `ares_uart_send_with_callback(interface, buf, cb, user_data)` | 发送 `net_buf` 并在 UART TX 完成或失败时通知调用者。 |
 | `ares_uart_send_raw(interface, data, len)` | 发送原始字节。 |
 | `ares_uart_interface_alloc_buf(interface)` | 分配 UART 发送缓冲。 |
+| `ares_uart_caps(interface)` | 返回 UART 接口能力位。 |
+| `ares_uart_mtu(interface)` | 返回 UART 建议帧长上限。 |
 | `ares_uart_init_dev(interface, uart_dev)` | 绑定 Zephyr UART 设备。 |
 | `ARES_UART_INTERFACE_DEFINE(name)` | 定义 UART 接口实例。 |
 
@@ -265,11 +269,11 @@ PID 接口是旧版控制器工具。Motor 新 controller 不依赖该公共 API
 | --- | --- |
 | `ares_usbd_init(interface)` | 初始化 USB bulk 接口。 |
 | `ares_usbd_write(interface, buf)` | 发送 `net_buf`。 |
-| `ares_usbd_write_with_callback(interface, buf, cb, user_data)` | 发送并通知 TX 完成状态。 |
-| `ares_usbd_caps(interface)` | 返回 USB bulk 能力位。 |
-| `ares_usbd_mtu(interface)` | 返回当前 USB 速度下的 bulk endpoint MPS。 |
+| `ares_usbd_write_with_callback(interface, buf, cb, user_data)` | 发送 `net_buf` 并在 USB IN 传输完成或失败时通知调用者。 |
 | `ares_interface_alloc_buf(interface)` | 分配发送缓冲。 |
 | `ares_interface_alloc_buf_with_data(interface, data, len)` | 分配并携带现有数据块的发送缓冲。 |
+| `ares_usbd_caps(interface)` | 返回 USB bulk 接口能力位。 |
+| `ares_usbd_mtu(interface)` | 返回当前 USB bulk 端点最大包长，未初始化时返回 64。 |
 | `ARES_BULK_INTERFACE_DEFINE(name)` | 定义 USB bulk 接口实例。 |
 
 ### 协议层

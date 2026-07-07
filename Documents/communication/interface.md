@@ -74,8 +74,12 @@ UART 接口适合：
 
 - `ares_uart_init(struct AresInterface *interface)`
 - `ares_uart_send(struct AresInterface *interface, struct net_buf *buf)`
+- `ares_uart_send_with_callback(struct AresInterface *interface, struct net_buf *buf,
+  ares_interface_tx_done_cb_t cb, void *user_data)`
 - `ares_uart_send_raw(struct AresInterface *interface, uint8_t *data, uint16_t len)`
 - `ares_uart_interface_alloc_buf(struct AresInterface *interface)`
+- `ares_uart_caps(struct AresInterface *interface)`
+- `ares_uart_mtu(struct AresInterface *interface)`
 - `ares_uart_init_dev(struct AresInterface *interface, const struct device *uart_dev)`
 
 以及实例定义宏：
@@ -137,7 +141,8 @@ UART 异步回调收到 `UART_RX_RDY` 后：
 
 1. 把 `net_buf *` 放入 TX 队列。
 2. 由专用 TX 线程串行发送。
-3. 依靠 `UART_TX_DONE` / `UART_TX_ABORTED` 回调释放在飞缓冲。
+3. 依靠 `UART_TX_DONE` / `UART_TX_ABORTED` 回调触发 `send_with_callback()` 的完成通知。
+4. 完成通知返回后释放在飞缓冲。
 
 这一设计保证了单通道串口发送有统一仲裁点，避免多个上下文直接打到底层驱动。
 
@@ -159,13 +164,13 @@ UART 异步回调收到 `UART_RX_RDY` 后：
 
 UART 接口常见失败点如下：
 
-- TX 队列满：`ares_uart_send()` 返回 `-ENOMEM`，并释放缓冲。
+- TX 队列满：`ares_uart_send()` 返回 `-ENOMEM`，触发完成回调并释放缓冲。
 - 设备未 ready：`ares_uart_init()` 返回 `-ENODEV`。
 - `uart_callback_set()` 失败：初始化直接返回底层错误码。
-- `uart_tx()` 失败：发送线程记录错误并释放当前缓冲。
+- `uart_tx()` 失败：发送线程记录错误，触发完成回调并释放当前缓冲。
 
-调用者应将 `send()` 调用视为缓冲所有权转移边界；失败时不要再自行释放已经交给接口的缓冲，避免双重
-`unref`。
+调用者应将 `send()` 或 `send_with_callback()` 调用视为缓冲所有权转移边界；即使发送入口返回错误，
+当前实现也已处理完成回调与缓冲释放，调用者不要再自行释放。
 
 ### 最小入口
 
