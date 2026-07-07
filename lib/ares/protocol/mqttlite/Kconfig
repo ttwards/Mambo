@@ -1,0 +1,55 @@
+config ARES_MQTTLITE_PROTOCOL
+	bool "ARES MQTT-like protocol"
+	select ARES_COMM_LIB
+	select NET_BUF
+	help
+	  Enable a small MQTT-like publish/subscribe protocol for ARES interfaces.
+
+if ARES_MQTTLITE_PROTOCOL
+
+config ARES_MQTTLITE_MAX_TOPIC_LEN
+	int "Maximum topic/filter length"
+	range 1 255
+	default 64
+
+config ARES_MQTTLITE_MAX_PAYLOAD_SIZE
+	int "Maximum payload size"
+	range 1 65535
+	default 192
+
+config ARES_MQTTLITE_MAX_FRAME_SIZE
+	int "Maximum received frame size"
+	range 16 65535
+	default 272
+
+config ARES_MQTTLITE_MAX_SUBSCRIPTIONS
+	int "Maximum local subscriptions"
+	range 1 32
+	default 8
+
+config ARES_MQTTLITE_MAX_TOPICS
+	int "Maximum registered topic ids"
+	range 1 64
+	default 8
+
+config ARES_MQTTLITE_MAX_INFLIGHT
+	int "Maximum QoS inflight packets"
+	range 1 32
+	default 4
+
+config ARES_MQTTLITE_RETRY_INTERVAL_MS
+	int "QoS retry interval in milliseconds"
+	range 10 60000
+	default 200
+
+config ARES_MQTTLITE_MAX_RETRIES
+	int "Maximum QoS retries before timeout"
+	range 1 255
+	default 5
+
+config ARES_MQTTLITE_LOG_LEVEL
+	int "ARES MQTT-like protocol log level"
+	range 0 4
+	default 3
+
+endif

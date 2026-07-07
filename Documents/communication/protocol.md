@@ -227,6 +227,124 @@ dual_func_add(&link_proto, 0x10, my_rpc);
 dual_sync_add(&link_proto, 0x20, sync_buf, sizeof(sync_buf), sync_cb);
 ```
 
+## MQTT-like 协议
+
+### 角色
+
+MQTT-like 协议面向 USB bulk 这类可靠包传输接口上的轻量发布/订阅。它复用
+`AresInterface`，不直接依赖 USB 类实现，因此接口层仍负责收发 `net_buf`，协议层只处理 topic、
+QoS 握手和消息分发。
+
+实现位于：
+
+- 头文件：`include/ares/protocol/mqttlite/mqttlite_protocol.h`
+- 实现：`lib/ares/protocol/mqttlite/mqttlite_protocol.c`
+
+### 帧类型
+
+协议帧包含固定 12 字节头：
+
+- magic
+- version
+- frame type
+- flags
+- packet id
+- topic length
+- payload length
+
+当前定义的帧类型：
+
+- `PUBLISH`
+- `PUBACK`
+- `PUBREC`
+- `PUBREL`
+- `PUBCOMP`
+- `PING`
+- `PONG`
+
+topic 与 payload 紧跟在固定头之后。payload 是变长字段，长度由 frame header 携带，不是定长。
+最大 topic、payload、frame、订阅数量、topic id 注册数量和在飞 QoS 包数量由
+`CONFIG_ARES_MQTTLITE_*` 控制。
+
+### Topic ID
+
+普通 `PUBLISH` 帧携带完整 topic 字符串。性能敏感路径可以先用
+`ares_mqttlite_register_topic()` 在本地注册 `uint16_t topic_id -> topic` 映射，再使用：
+
+- `ares_mqttlite_subscribe_id()`
+- `ares_mqttlite_unsubscribe_id()`
+- `ares_mqttlite_publish_id()`
+
+topic-id 帧会设置 frame flags 中的 topic-id 位，并把 topic 字段压缩为 2 字节 little-endian id。
+接收端若注册了对应 id，会把 id 反查为字符串传给原有消息回调；未注册时 id 订阅仍可匹配，但回调中的
+topic 字符串为空。
+
+### QoS
+
+协议支持三档 QoS：
+
+- `ARES_MQTTLITE_QOS0`：最多一次，发送后不等待确认。
+- `ARES_MQTTLITE_QOS1`：至少一次，发送端等待 `PUBACK`，超时重发 `PUBLISH`。
+- `ARES_MQTTLITE_QOS2`：恰好一次语义，使用 `PUBLISH/PUBREC/PUBREL/PUBCOMP`，接收端在
+  `PUBREL` 阶段交付。
+
+QoS1/QoS2 的发送端会记录在飞包，按 `CONFIG_ARES_MQTTLITE_RETRY_INTERVAL_MS` 重试，超过
+`CONFIG_ARES_MQTTLITE_MAX_RETRIES` 后通过发布回调返回超时。
+
+### Topic 匹配
+
+订阅使用 `ares_mqttlite_subscribe()` 注册本地回调。topic filter 支持：
+
+- 精确匹配
+- 单层通配符 `+`
+- 末尾多层通配符 `#`
+
+协议当前不向远端发送 SUBSCRIBE 控制帧；订阅表是本地分发表。两端需要按应用契约分别注册各自要接收的
+topic。
+
+topic-id 订阅不做通配符匹配，只比较 `uint16_t topic_id`。这条路径适合高频 telemetry 和固定控制
+topic。
+
+### 发送路径
+
+发布消息使用：
+
+```c
+ARES_MQTTLITE_PROTOCOL_DEFINE(link_proto);
+
+ares_bind_interface(&usb_bulk_interface, &link_proto);
+ares_mqttlite_subscribe(&link_proto, "robot/+/state", state_cb, NULL);
+ares_mqttlite_publish(&link_proto, "robot/chassis/state", payload, payload_len,
+		      ARES_MQTTLITE_QOS1, publish_cb, NULL);
+```
+
+协议通过已绑定接口分配 `net_buf` 并调用 `send()`。因此它可以跑在 USB bulk 上，也可以跑在其他实现了
+`AresInterfaceAPI` 的块式接口上。
+
+QoS0 的 topic-id 快速路径可以避免 payload 复制：
+
+```c
+struct ares_mqttlite_publish_buffer pub;
+
+ares_mqttlite_register_topic(&link_proto, 1, "robot/chassis/state");
+ares_mqttlite_publish_prepare_id(&link_proto, 1, payload_len, &pub);
+memcpy(pub.payload, payload, payload_len);
+ares_mqttlite_publish_commit(&link_proto, &pub);
+```
+
+这条路径直接让调用者写入最终 `net_buf` 的 payload 区域。QoS1/QoS2 仍会保留 payload 副本用于重试。
+
+### 错误边界
+
+MQTT-like 协议的主要错误边界：
+
+- topic 或 payload 超过配置上限时，发布返回 `-EINVAL`。
+- frame 超过接收缓冲上限时，解析器丢弃该帧。
+- topic id 为 0 或未按应用契约双边约定时，远端无法按预期分发消息。
+- QoS 在飞表满时，QoS1/QoS2 发布返回 `-ENOMEM`。
+- QoS 重试耗尽时，发布回调收到 `ARES_MQTTLITE_PUBLISH_TIMEOUT`。
+- 断连事件会清空在飞 QoS 状态和已暂存的 QoS2 接收状态。
+
 ## 绘图协议
 
 ### 角色

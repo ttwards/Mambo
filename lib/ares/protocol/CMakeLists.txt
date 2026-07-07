@@ -1,2 +1,3 @@
 add_subdirectory_ifdef(CONFIG_DUAL_PROPOSE_PROTOCOL dual)
 add_subdirectory_ifdef(CONFIG_ARES_PLOTTER_PROTOCOL plotter)
+add_subdirectory_ifdef(CONFIG_ARES_MQTTLITE_PROTOCOL mqttlite)

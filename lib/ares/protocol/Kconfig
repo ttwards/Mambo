@@ -7,3 +7,4 @@ config DUAL_PROPOSE_PROTOCOL
 	select ARES_COMM_LIB
 
 rsource "plotter/Kconfig"
+rsource "mqttlite/Kconfig"
