@@ -128,15 +128,6 @@ VCAN 在主机板上暴露标准 Zephyr CAN 设备，实际通过 SPI 访问远�
 传感器模块提供 IMU、光流或运动传感器驱动。驱动应尽量遵循 Zephyr 传感器 API，项目特定
 标定数据放在对应 binding 中。
 
-### 图形（Graph）
-
-路径：
-
-- `drivers/graph/`
-
-Graph 当前承载 INSLink 相关代码。该目录并非通用图形库，维护时应按通信或姿态子系统分类，
-不应在此继续扩展无关功能。
-
 ## ARES 库
 
 ### 接口层（Interface）
