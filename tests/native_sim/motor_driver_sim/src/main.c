@@ -71,17 +71,17 @@
 #define RS_RATE_WINDOW_MS  300
 #define DJI_RATE_WINDOW_MS 300
 
-#define CONTROL_LATENCY_MS         50
-#define DJI_CONTROL_LATENCY_MS     2
-#define DJI_7_MOTOR_LOAD_COUNT     7
-#define DJI_7_MOTOR_LOAD_ROUNDS    100
-#define DJI_7_MOTOR_MIN_CONTROL_HZ 950
+#define CONTROL_LATENCY_MS            50
+#define DJI_CONTROL_LATENCY_MS        2
+#define DJI_7_MOTOR_LOAD_COUNT        7
+#define DJI_7_MOTOR_LOAD_ROUNDS       100
+#define DJI_7_MOTOR_MIN_CONTROL_HZ    950
 /* Includes SOF through IFS for classic CAN; bit stuffing is intentionally not modeled. */
 #define SIM_CAN_CLASSIC_STD_BASE_BITS 47U
 #define SIM_CAN_CLASSIC_EXT_BASE_BITS 67U
 #define SIM_CAN_DEFAULT_BITRATE       1000000U
-#define ONLINE_RECOVERY_MS         30
-#define REPLY_RESPONDER_STACK_SIZE 1024
+#define ONLINE_RECOVERY_MS            30
+#define REPLY_RESPONDER_STACK_SIZE    1024
 
 struct sim_filter {
 	bool used;
@@ -150,9 +150,8 @@ static bool frame_matches_filter(const struct can_frame *frame, const struct can
 static uint32_t sim_can_frame_bits(const struct can_frame *frame)
 {
 	uint32_t data_bytes = MIN(frame->dlc, SIM_CAN_DLEN);
-	uint32_t base_bits = ((frame->flags & CAN_FRAME_IDE) != 0U) ?
-				     SIM_CAN_CLASSIC_EXT_BASE_BITS :
-				     SIM_CAN_CLASSIC_STD_BASE_BITS;
+	uint32_t base_bits = ((frame->flags & CAN_FRAME_IDE) != 0U) ? SIM_CAN_CLASSIC_EXT_BASE_BITS
+								    : SIM_CAN_CLASSIC_STD_BASE_BITS;
 
 	if ((frame->flags & CAN_FRAME_RTR) != 0U) {
 		data_bytes = 0U;
@@ -1364,8 +1363,8 @@ ZTEST(motor_driver_sim, test_dji_7_motors_on_one_can_keep_950hz_control)
 			     "DJI load motor %u device is not ready", i);
 		driver_motor_control(dji_load_devs[i], ENABLE_MOTOR);
 		configure_dji_speed_test_limits(dji_load_devs[i]);
-		zassert_equal(motor_set_speed(dji_load_devs[i], 1000.0f + (float)(i * 100U)),
-			      0, "DJI load motor %u rejected speed setpoint", i);
+		zassert_equal(motor_set_speed(dji_load_devs[i], 1000.0f + (float)(i * 100U)), 0,
+			      "DJI load motor %u rejected speed setpoint", i);
 	}
 
 	emit_all_dji_load_reports(0);

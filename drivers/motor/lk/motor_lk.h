@@ -38,11 +38,11 @@
 
 #define SIZE_OF_ARRAY(x) (sizeof(x) / sizeof(x[0]))
 
-#define CAN_SEND_STACK_SIZE 4096
-#define CAN_SEND_PRIORITY   -1
+#define CAN_SEND_STACK_SIZE      4096
+#define CAN_SEND_PRIORITY        -1
 #define LK_STATUS_POLL_PERIOD_MS 8
 #define LK_STATUS_REPLY_FRESH_MS 3
-#define PI                  3.14159265f
+#define PI                       3.14159265f
 #ifdef RAD2DEG
 #undef RAD2DEG
 #endif

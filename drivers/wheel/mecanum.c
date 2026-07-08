@@ -146,7 +146,7 @@ struct wheel_driver_api mecanum_driver_api = {
 			   DT_STRING_UNQUOTED(DT_DRV_INST(inst), angle_offset) +                   \
 				   DT_STRING_UNQUOTED(DT_DRV_INST(inst), free_angle) - 90.0f,      \
 			   false},                                                                 \
-		.static_angle = NAN,                                                             \
+		.static_angle = NAN,                                                               \
 	};                                                                                         \
 	static const mecanum_cfg_t mecanum_cfg_##inst = {                                          \
 		.common = DT_WHEEL_CONFIG_GET(inst),                                               \
