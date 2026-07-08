@@ -77,6 +77,12 @@ config MOTOR_DM
       Add support for dm motors
     select MOTOR_COMMON
 
+config MOTOR_GQ
+    bool "MOTOR GQ"
+    help
+      Add support for Gaoqing motors over classic CAN or CAN FD.
+    select MOTOR_COMMON
+
 config MOTOR_DM_DEFAULT_FREQ_HZ
 	int "Default DM motor request frequency in Hz"
 	default 200
