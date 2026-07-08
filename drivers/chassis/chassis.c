@@ -264,7 +264,7 @@ void chassis_thread_entry(void *arg1, void *arg2, void *arg3)
 		int32_t deltaTimeUs = k_cyc_to_us_floor32(data->currTime - data->prevTime);
 		float error = 0;
 
-		if (!isnanf(data->chassis_sensor_data.Yaw) && data->angleControl) {
+		if (!isnan(data->chassis_sensor_data.Yaw) && data->angleControl) {
 			float delta_Yaw = data->chassis_sensor_data.Yaw - data->target_status.angle;
 			delta_Yaw = fmodf(delta_Yaw, 360.0f);
 			if (delta_Yaw > 180) {
