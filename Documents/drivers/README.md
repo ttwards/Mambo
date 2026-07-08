@@ -24,8 +24,6 @@
   面向底盘与部分传感器管理代码路径使用的轻量 PID 工具层。
 - [传感器(sensor)](sensor.md)
   本仓库当前提供的 Zephyr 传感器驱动。
-- [图形(graph)](graph.md)
-  当前位于常规驱动注册链路之外、处于早期阶段的 INSLink/RTT 图形支持代码。
 
 ## 通用约定
 
@@ -44,7 +42,6 @@
 - `wheel` 实现依赖 `motor` API。
 - `sbus` 一般由应用或示例直接消费。
 - `sensor` 驱动实现标准 Zephyr sensor API，并被 `lib/ares/` 与 `samples/` 中的 IMU 与感知代码使用。
-- `graph` 当前与常规 Zephyr 驱动体系分离，在具备绑定、构建胶水和公共 API 前应视为实验性代码。
 
 ## 维护说明
 
