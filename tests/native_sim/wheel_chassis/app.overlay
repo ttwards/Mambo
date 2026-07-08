@@ -1,0 +1,83 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	test_pid: test_pid {
+		compatible = "pid,single";
+		status = "okay";
+		k_p = "1.0";
+		k_i = "0.0";
+		k_d = "0.0";
+		out_max = "10.0";
+	};
+
+	mecanum_motor: mecanum_motor {
+		compatible = "ares,test-motor";
+		status = "okay";
+	};
+
+	mecanum0: mecanum0 {
+		compatible = "ares,mecanum";
+		status = "okay";
+		wheel-motor = <&mecanum_motor>;
+		wheel-radius = "0.1";
+		angle-offset = "0";
+		free-angle = "0";
+	};
+
+	steer_motor: steer_motor {
+		compatible = "ares,test-motor";
+		status = "okay";
+	};
+
+	steer_drive_motor: steer_drive_motor {
+		compatible = "ares,test-motor";
+		status = "okay";
+	};
+
+	steer0: steer0 {
+		compatible = "ares,steerwheel";
+		status = "okay";
+		steer-motor = <&steer_motor>;
+		wheel-motor = <&steer_drive_motor>;
+		wheel-radius = "0.1";
+		angle-offset = "0";
+	};
+
+	chassis_wheel0: chassis_wheel0 {
+		compatible = "ares,test-wheel";
+		status = "okay";
+		#wheel-cells = <2>;
+	};
+
+	chassis_wheel1: chassis_wheel1 {
+		compatible = "ares,test-wheel";
+		status = "okay";
+		#wheel-cells = <2>;
+	};
+
+	chassis_wheel2: chassis_wheel2 {
+		compatible = "ares,test-wheel";
+		status = "okay";
+		#wheel-cells = <2>;
+	};
+
+	chassis_wheel3: chassis_wheel3 {
+		compatible = "ares,test-wheel";
+		status = "okay";
+		#wheel-cells = <2>;
+	};
+
+	chassis0: chassis0 {
+		compatible = "ares,chassis";
+		status = "okay";
+		angle-pid = <&test_pid>;
+		max_gyro = "5.0";
+		max_linear_accel = "20.0";
+		wheels = <&chassis_wheel0 10000 10000>,
+			 <&chassis_wheel1 10000 (-10000)>,
+			 <&chassis_wheel2 (-10000) (-10000)>,
+			 <&chassis_wheel3 (-10000) 10000>;
+	};
+};

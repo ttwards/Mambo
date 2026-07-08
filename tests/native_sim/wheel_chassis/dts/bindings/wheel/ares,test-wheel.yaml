@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: Test wheel device
+
+compatible: "ares,test-wheel"
+
+include: [base.yaml]
+
+wheel-cells:
+  - offset_x
+  - offset_y
