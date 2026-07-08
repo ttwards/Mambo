@@ -74,9 +74,9 @@
 	dji0: dji0 {
 		compatible = "dji,motor";
 		status = "okay";
-		id = <5>;
+		id = <1>;
 		tx_id = <0x200>;
-		rx_id = <0x205>;
+		rx_id = <0x201>;
 		can_channel = <&fake_can>;
 		gear_ratio = "1.0";
 		is_m3508;
@@ -86,9 +86,9 @@
 	dji1: dji1 {
 		compatible = "dji,motor";
 		status = "okay";
-		id = <6>;
+		id = <2>;
 		tx_id = <0x200>;
-		rx_id = <0x206>;
+		rx_id = <0x202>;
 		can_channel = <&fake_can>;
 		gear_ratio = "1.0";
 		is_m3508;
@@ -96,6 +96,54 @@
 	};
 
 	dji2: dji2 {
+		compatible = "dji,motor";
+		status = "okay";
+		id = <5>;
+		tx_id = <0x1ff>;
+		rx_id = <0x205>;
+		can_channel = <&fake_can>;
+		gear_ratio = "1.0";
+		is_m3508;
+		controllers = <&test_speed>;
+	};
+
+	dji3: dji3 {
+		compatible = "dji,motor";
+		status = "okay";
+		id = <3>;
+		tx_id = <0x200>;
+		rx_id = <0x203>;
+		can_channel = <&fake_can>;
+		gear_ratio = "1.0";
+		is_m3508;
+		controllers = <&test_speed>;
+	};
+
+	dji4: dji4 {
+		compatible = "dji,motor";
+		status = "okay";
+		id = <4>;
+		tx_id = <0x200>;
+		rx_id = <0x204>;
+		can_channel = <&fake_can>;
+		gear_ratio = "1.0";
+		is_m3508;
+		controllers = <&test_speed>;
+	};
+
+	dji5: dji5 {
+		compatible = "dji,motor";
+		status = "okay";
+		id = <6>;
+		tx_id = <0x1ff>;
+		rx_id = <0x206>;
+		can_channel = <&fake_can>;
+		gear_ratio = "1.0";
+		is_m3508;
+		controllers = <&test_speed>;
+	};
+
+	dji6: dji6 {
 		compatible = "dji,motor";
 		status = "okay";
 		id = <7>;

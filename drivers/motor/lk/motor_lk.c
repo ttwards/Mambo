@@ -15,6 +15,25 @@
 
 LOG_MODULE_REGISTER(motor_lk, CONFIG_MOTOR_LOG_LEVEL);
 
+static bool lk_motor_pack(const struct device *dev, struct can_frame *frame);
+
+static void lk_send_control_frame(const struct device *dev)
+{
+	struct can_frame tx_frame = {0};
+	struct lk_motor_data *data = dev->data;
+	const struct lk_motor_cfg *cfg = dev->config;
+
+	if (!data->common.link.requested_enabled) {
+		return;
+	}
+
+	if (!lk_motor_pack(dev, &tx_frame)) {
+		return;
+	}
+	motor_can_sched_send_reply(cfg->common.phy, &tx_frame, LK_CMD_ID_BASE + cfg->id,
+				   CAN_STD_ID_MASK, 5U, "lk-control");
+}
+
 int float_to_int(float x, float x_min, float x_max, int bits)
 {
 
@@ -101,11 +120,13 @@ void lk_motor_control(const struct device *dev, enum motor_cmd cmd)
 	// }
 }
 
-static void lk_motor_pack(const struct device *dev, struct can_frame *frame)
+static bool lk_motor_pack(const struct device *dev, struct can_frame *frame)
 {
 	struct lk_motor_data *data = (struct lk_motor_data *)(dev->data);
 	const struct lk_motor_cfg *cfg = (struct lk_motor_cfg *)(dev->config);
+	bool control_frame = true;
 
+	memset(frame, 0, sizeof(*frame));
 	frame->id = LK_CMD_ID_BASE + cfg->id; // 标准ID: 0x140 + ID
 	frame->dlc = 8;
 	frame->flags = 0; // 标准帧
@@ -132,6 +153,7 @@ static void lk_motor_pack(const struct device *dev, struct can_frame *frame)
 		}
 		if (data->common.target != MOTOR_TARGET_TORQUE) {
 			frame->data[0] = LK_CMD_READ_STAT;
+			control_frame = false;
 			break;
 		}
 		frame->data[0] = LK_CMD_TORQUE_LOOP;
@@ -150,6 +172,7 @@ static void lk_motor_pack(const struct device *dev, struct can_frame *frame)
 	case PV:
 		if (data->common.target != MOTOR_TARGET_POSITION) {
 			frame->data[0] = LK_CMD_READ_STAT;
+			control_frame = false;
 			break;
 		}
 		frame->data[0] = LK_CMD_POS_LOOP_MULTI;
@@ -171,8 +194,11 @@ static void lk_motor_pack(const struct device *dev, struct can_frame *frame)
 	default:
 
 		frame->data[0] = LK_CMD_READ_STAT;
+		control_frame = false;
 		break;
 	}
+
+	return control_frame;
 }
 
 int lk_set(const struct device *dev, motor_setpoint_t *status)
@@ -264,6 +290,8 @@ int lk_set(const struct device *dev, motor_setpoint_t *status)
 		}
 	}
 
+	lk_send_control_frame(dev);
+
 	return 0;
 }
 
@@ -296,6 +324,9 @@ static void lk_can_rx_handler(const struct device *can_dev, struct can_frame *fr
 	struct lk_motor_data *data = (struct lk_motor_data *)(motor_devices[idx]->data);
 	if (!data->common.link.online) {
 		data->need_init_frames = true;
+	}
+	if (frame->data[0] == LK_CMD_READ_STAT) {
+		data->last_status_reply_ms = k_uptime_get_32();
 	}
 	motor_link_observe_reply(motor_devices[idx], &data->common.link);
 	// Data[0]: 命令字节
@@ -340,60 +371,52 @@ void lk_rx_data_handler(struct k_work *work)
 
 void lk_tx_isr_handler(struct k_timer *dummy)
 {
-	k_work_submit_to_queue(&lk_work_queue, &lk_tx_data_handle);
+	uint32_t now = k_uptime_get_32();
+
+	ARG_UNUSED(dummy);
+
+	for (int i = 0; i < MOTOR_COUNT; i++) {
+		struct lk_motor_data *data = motor_devices[i]->data;
+
+		if (!data->common.link.requested_enabled) {
+			continue;
+		}
+		if (data->last_status_reply_ms != 0U &&
+		    now - data->last_status_reply_ms < LK_STATUS_REPLY_FRESH_MS) {
+			continue;
+		}
+		k_work_submit_to_queue(&lk_work_queue, &lk_tx_data_handle);
+		return;
+	}
 }
 
-// 发送处理线程
 void lk_tx_data_handler(struct k_work *work)
 {
 	struct can_frame tx_frame = {0};
+	uint32_t now = k_uptime_get_32();
+
+	ARG_UNUSED(work);
 
 	for (int i = 0; i < MOTOR_COUNT; i++) {
 		struct lk_motor_data *data = motor_devices[i]->data;
 		const struct lk_motor_cfg *cfg = motor_devices[i]->config;
 
 		if (data->common.link.requested_enabled) {
+			if (data->last_status_reply_ms != 0U &&
+			    now - data->last_status_reply_ms < LK_STATUS_REPLY_FRESH_MS) {
+				continue;
+			}
 			if (motor_link_note_missed_reply(motor_devices[i], &data->common.link,
 							 10)) {
 				data->offline_tx_cnt = 0;
 			}
-			if (!data->common.link.online) {
-				if ((data->offline_tx_cnt++ % 3U) == 0U) {
-					memset(&tx_frame, 0, sizeof(tx_frame));
-					tx_frame.id = LK_CMD_ID_BASE + cfg->id;
-					tx_frame.dlc = 8;
-					tx_frame.flags = 0;
-					tx_frame.data[0] = LK_CMD_MOTOR_RUN;
-					motor_can_sched_send_with_priority(
-						cfg->common.phy, &tx_frame,
-						MOTOR_CAN_SCHED_PRIO_CRITICAL, "lk-retry-enable");
-				}
-				continue;
-			}
-			if (data->need_init_frames) {
-				memset(&tx_frame, 0, sizeof(tx_frame));
-				tx_frame.id = LK_CMD_ID_BASE + cfg->id;
-				tx_frame.dlc = 8;
-				tx_frame.flags = 0;
-				tx_frame.data[0] = LK_CMD_MOTOR_RUN;
-				motor_can_sched_send_with_priority(cfg->common.phy, &tx_frame,
-								   MOTOR_CAN_SCHED_PRIO_CRITICAL,
-								   "lk-reenable");
-				data->params_update[0] = true;
-				data->params_update[1] = true;
-				data->params_update[2] = true;
-				data->need_init_frames = false;
-				data->offline_tx_cnt = 0;
-				k_work_submit_to_queue(&lk_work_queue, &lk_tx_params_data_handle);
-			}
 			lk_motor_pack(motor_devices[i], &tx_frame);
 			motor_can_sched_send_reply(cfg->common.phy, &tx_frame,
 						   LK_CMD_ID_BASE + cfg->id, CAN_STD_ID_MASK, 5U,
-						   "lk-control");
+						   tx_frame.data[0] == LK_CMD_READ_STAT ?
+							   "lk-read-stat" :
+							   "lk-control");
 		}
-		// if (i % 2 == 1) {
-		//     k_usleep(500);
-		// }
 	}
 }
 void lk_tx_params_data_handler(struct k_work *work)
@@ -537,7 +560,7 @@ void lk_init_handler(struct k_work *work)
 	}
 	k_work_submit_to_queue(&lk_work_queue, &lk_tx_params_data_handle);
 	lk_tx_timer.expiry_fn = lk_tx_isr_handler;
-	k_timer_start(&lk_tx_timer, K_MSEC(600), K_MSEC(8));
+	k_timer_start(&lk_tx_timer, K_MSEC(600), K_MSEC(LK_STATUS_POLL_PERIOD_MS));
 	k_timer_user_data_set(&lk_tx_timer, &lk_tx_data_handle);
 }
 
