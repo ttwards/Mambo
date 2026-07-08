@@ -27,6 +27,7 @@
 - `tests/native_sim/pid/`
 - `tests/native_sim/sbus/`
 - `tests/native_sim/motor_driver_sim/`
+- `tests/native_sim/wheel_chassis/`
 
 ### 常用命令
 
@@ -43,6 +44,7 @@ west twister -T tests/native_sim/module_smoke --platform native_sim/native/64 --
 west twister -T tests/native_sim/pid --platform native_sim/native/64 --inline-logs
 west twister -T tests/native_sim/sbus --platform native_sim/native/64 --inline-logs
 west twister -T tests/native_sim/motor_driver_sim --platform native_sim/native/64 --inline-logs
+west twister -T tests/native_sim/wheel_chassis --platform native_sim/native/64 --inline-logs
 ```
 
 单测试构建（快速检查）：
@@ -112,6 +114,25 @@ ares.native_sim.sbus
 
 `prj.conf` 启用 `CONFIG_ARES_SBUS`、UART async API 与 runtime configure，平台限定 `native_sim/native/64`。
 
+## wheel_chassis
+
+测试路径：`tests/native_sim/wheel_chassis/src/main.c` 与 `app.overlay`
+
+测试行为：
+
+- 使用测试专用 motor 设备承载 `ares,mecanum` 与 `ares,steerwheel`，验证轮级 API 到电机 setpoint 的转换。
+- 覆盖麦克纳姆轮速度投影、状态读取和静态角锁存。
+- 覆盖舵轮短路径反向驱动、零速停止与禁能扭矩清零。
+- 使用测试专用 wheel 设备承载 `ares,chassis`，直接验证底盘公共命令映射、运动解析与静态角下发。
+
+testcase：
+
+```text
+ares.native_sim.wheel_chassis
+```
+
+`prj.conf` 启用 `CONFIG_MOTOR`、`CONFIG_PID`、`CONFIG_WHEEL`、`CONFIG_CHASSIS` 与 `CONFIG_ZTEST`，平台允许 `native_sim` 与 `native_sim/native/64`。
+
 ## motor_driver_sim
 
 测试路径：`tests/native_sim/motor_driver_sim/src/main.c` 与 `app.overlay`
@@ -124,7 +145,7 @@ ares.native_sim.sbus
 - `mi0`：`mi,motor`
 - `rs0`：`rs,motor`
 - `lk0`：`lk,motor`
-- `dji0`：`dji,motor`
+- `dji0`~`dji6`：`dji,motor`
 
 驱动配置包含 `fake_can`，并通过 `fake_can` 通道复用 `can_channel`。
 
@@ -142,15 +163,17 @@ ares.native_sim.sbus
 
 `send` 行为：
 
-- 每帧记录到环形缓冲 `SIM_TX_MAX = 128`
+- 按 `bitrate` 和经典 CAN 帧格式占用虚拟总线时间
+- 标准帧 8 字节按约 111 bit 计算，扩展帧 8 字节按约 131 bit 计算
+- 每帧记录到环形缓冲 `SIM_TX_MAX = 512`
 - 记录 `can_frame`、`uptime`、`cycle`
-- 同步回调立即触发 tx 回调（`callback` 非空时）
+- TX 记录时间为帧完成时间，tx 回调在虚拟帧发送完成后触发
 
 `add_rx_filter` 与回调分发行为：
 
 - 过滤注册按 `can_filter` 匹配
-- `sim_emit_frame` 遍历过滤器并触发回调
-- 不模拟总线仲裁、mailbox 竞争、bus-off、误码状态
+- `sim_emit_frame` 先占用虚拟总线时间，再遍历过滤器并触发回调
+- 不模拟 bit stuffing、总线仲裁、mailbox 竞争、bus-off、误码状态
 
 该模型适合协议与驱动逻辑验证，不适合硬件级收发行为还原。
 
@@ -195,6 +218,8 @@ ares.native_sim.sbus
 - DM/MI/RS：`motor_set_mit` 的连续 setpoint（10、20、30）；
 - LK：`motor_set_speed` 的连续 setpoint（25、50、75）；
 - 每次下发前/后都有 `emit_*_feedback` 的配套；
+- LK 速度 setpoint 期望直接触发 `0xA2` 控制帧；8ms timer 平常重发当前命令，只有无可用
+  控制目标时才 fallback 到 `0x9C` 状态读取。
 - 使用期望帧匹配函数比较：
   - 帧 ID（标准/扩展）
   - DLC（固定 8）
@@ -205,8 +230,8 @@ ares.native_sim.sbus
 
 #### 延迟阈值
 
-- `CONTROL_LATENCY_MS = 1000`
-- `DJI_CONTROL_LATENCY_MS = 30`
+- `CONTROL_LATENCY_MS = 50`
+- `DJI_CONTROL_LATENCY_MS = 2`
 
 延迟由下发时间戳到匹配控制帧到达时间计算。测试使用 `expect_payload_sequence_step` 在窗口内等待；超时给出完整帧转储用于诊断。
 
@@ -230,6 +255,10 @@ ares.native_sim.sbus
 #### DJI 压测与公平性
 
 `test_dji_control_not_starved_by_reply_backlog` 构造 DM backlog 后验证 DJI 控制帧仍能发送，确保请求回复流量不会永久压住周期/关键控制链路。
+
+`test_dji_7_motors_on_one_can_keep_950hz_control` 将 7 个 DJI 电机挂在同一个
+fake CAN 上，按 `0x200`/`0x1ff` 聚合帧槽位统计每个电机的控制更新频率，
+要求每个电机不低于 950Hz。
 
 ## 配置与 testcase 约定
 

@@ -194,6 +194,26 @@ Kconfig：
 - 计算出的 RPM 命令
 - 已缓存的静态角
 
+### 麦克纳姆轮示意
+
+俯视单个麦克纳姆轮时，驱动电机提供轮周切向速度，滚子方向提供自由滚动轴。驱动会把底盘请求速度向量投影到自由滚动轴，再折算成电机 RPM。
+
+```text
+                 target vector
+                      ^
+                      |
+                      |
+        wheel face    |        free rolling axis
+      +-------------+ |       /
+      |  / / / / /  | |      /  free-angle
+      | / / / / /   | |     /
+      |/ / / / /    | +----+------> motor tangential axis
+      +-------------+
+
+      target projection on free axis
+          = target speed * cos(target angle - free axis angle)
+```
+
 ### 运行时行为
 
 `mecanum_set_speed()` 将请求的底盘运动向量投影到轮子的自由滚动轴，再把投影线速度转换为电机 RPM。
