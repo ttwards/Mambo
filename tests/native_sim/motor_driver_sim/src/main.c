@@ -24,6 +24,10 @@
 #define DJI_NODE  DT_NODELABEL(dji0)
 #define DJI2_NODE DT_NODELABEL(dji1)
 #define DJI3_NODE DT_NODELABEL(dji2)
+#define DJI4_NODE DT_NODELABEL(dji3)
+#define DJI5_NODE DT_NODELABEL(dji4)
+#define DJI6_NODE DT_NODELABEL(dji5)
+#define DJI7_NODE DT_NODELABEL(dji6)
 
 #define DM_DEV   DEVICE_DT_GET(DM_NODE)
 #define MI_DEV   DEVICE_DT_GET(MI_NODE)
@@ -32,6 +36,10 @@
 #define DJI_DEV  DEVICE_DT_GET(DJI_NODE)
 #define DJI2_DEV DEVICE_DT_GET(DJI2_NODE)
 #define DJI3_DEV DEVICE_DT_GET(DJI3_NODE)
+#define DJI4_DEV DEVICE_DT_GET(DJI4_NODE)
+#define DJI5_DEV DEVICE_DT_GET(DJI5_NODE)
+#define DJI6_DEV DEVICE_DT_GET(DJI6_NODE)
+#define DJI7_DEV DEVICE_DT_GET(DJI7_NODE)
 
 #define DM_TX_ID   DT_PROP(DM_NODE, tx_id)
 #define DM_RX_ID   DT_PROP(DM_NODE, rx_id)
@@ -44,6 +52,10 @@
 #define DJI2_RX_ID DT_PROP(DJI2_NODE, rx_id)
 #define DJI3_TX_ID DT_PROP(DJI3_NODE, tx_id)
 #define DJI3_RX_ID DT_PROP(DJI3_NODE, rx_id)
+#define DJI4_RX_ID DT_PROP(DJI4_NODE, rx_id)
+#define DJI5_RX_ID DT_PROP(DJI5_NODE, rx_id)
+#define DJI6_RX_ID DT_PROP(DJI6_NODE, rx_id)
+#define DJI7_RX_ID DT_PROP(DJI7_NODE, rx_id)
 
 #define MI_MODE_FEEDBACK     0x02U
 #define RS_MODE_FEEDBACK     0x02U
@@ -51,7 +63,7 @@
 #define RS_MODE_MOTOR_REPORT 0x18U
 
 #define SIM_FILTER_MAX 16
-#define SIM_TX_MAX     128
+#define SIM_TX_MAX     512
 #define SIM_CAN_DLEN   8U
 
 #define DM_RATE_WINDOW_MS  300
@@ -59,8 +71,15 @@
 #define RS_RATE_WINDOW_MS  300
 #define DJI_RATE_WINDOW_MS 300
 
-#define CONTROL_LATENCY_MS         1000
-#define DJI_CONTROL_LATENCY_MS     30
+#define CONTROL_LATENCY_MS         50
+#define DJI_CONTROL_LATENCY_MS     2
+#define DJI_7_MOTOR_LOAD_COUNT     7
+#define DJI_7_MOTOR_LOAD_ROUNDS    100
+#define DJI_7_MOTOR_MIN_CONTROL_HZ 950
+/* Includes SOF through IFS for classic CAN; bit stuffing is intentionally not modeled. */
+#define SIM_CAN_CLASSIC_STD_BASE_BITS 47U
+#define SIM_CAN_CLASSIC_EXT_BASE_BITS 67U
+#define SIM_CAN_DEFAULT_BITRATE       1000000U
 #define ONLINE_RECOVERY_MS         30
 #define REPLY_RESPONDER_STACK_SIZE 1024
 
@@ -81,6 +100,16 @@ static struct sim_filter sim_filters[SIM_FILTER_MAX];
 static struct sim_tx_record sim_tx_history[SIM_TX_MAX];
 static uint32_t sim_tx_count;
 static struct k_spinlock sim_lock;
+static uint32_t sim_bus_free_cycle;
+static bool sim_bus_reserved;
+
+static const struct device *const dji_load_devs[DJI_7_MOTOR_LOAD_COUNT] = {
+	DJI_DEV, DJI2_DEV, DJI4_DEV, DJI5_DEV, DJI3_DEV, DJI6_DEV, DJI7_DEV,
+};
+
+static const uint32_t dji_load_rx_ids[DJI_7_MOTOR_LOAD_COUNT] = {
+	DJI_RX_ID, DJI2_RX_ID, DJI4_RX_ID, DJI5_RX_ID, DJI3_RX_ID, DJI6_RX_ID, DJI7_RX_ID,
+};
 
 struct test_can_config {
 	struct can_driver_config common;
@@ -118,6 +147,55 @@ static bool frame_matches_filter(const struct can_frame *frame, const struct can
 	return (frame->id & filter->mask) == (filter->id & filter->mask);
 }
 
+static uint32_t sim_can_frame_bits(const struct can_frame *frame)
+{
+	uint32_t data_bytes = MIN(frame->dlc, SIM_CAN_DLEN);
+	uint32_t base_bits = ((frame->flags & CAN_FRAME_IDE) != 0U) ?
+				     SIM_CAN_CLASSIC_EXT_BASE_BITS :
+				     SIM_CAN_CLASSIC_STD_BASE_BITS;
+
+	if ((frame->flags & CAN_FRAME_RTR) != 0U) {
+		data_bytes = 0U;
+	}
+
+	return base_bits + (data_bytes * 8U);
+}
+
+static uint32_t sim_can_frame_time_us(const struct device *dev, const struct can_frame *frame)
+{
+	const struct test_can_config *cfg = dev->config;
+	uint32_t bitrate = cfg->common.bitrate;
+	uint32_t bits = sim_can_frame_bits(frame);
+
+	if (bitrate == 0U) {
+		bitrate = SIM_CAN_DEFAULT_BITRATE;
+	}
+
+	return (bits * USEC_PER_SEC + bitrate - 1U) / bitrate;
+}
+
+static void sim_can_wait_for_bus_frame(const struct device *dev, const struct can_frame *frame)
+{
+	uint32_t duration_us = sim_can_frame_time_us(dev, frame);
+	uint32_t duration_cycles = k_us_to_cyc_ceil32(duration_us);
+	uint32_t wait_cycles;
+	k_spinlock_key_t key = k_spin_lock(&sim_lock);
+	uint32_t now = k_cycle_get_32();
+	uint32_t start = now;
+
+	if (sim_bus_reserved && (int32_t)(sim_bus_free_cycle - now) > 0) {
+		start = sim_bus_free_cycle;
+	}
+	sim_bus_free_cycle = start + duration_cycles;
+	sim_bus_reserved = true;
+	wait_cycles = sim_bus_free_cycle - now;
+	k_spin_unlock(&sim_lock, key);
+
+	if (wait_cycles > 0U) {
+		k_busy_wait(k_cyc_to_us_ceil32(wait_cycles));
+	}
+}
+
 static int sim_can_add_rx_filter(const struct device *dev, can_rx_callback_t cb, void *user_data,
 				 const struct can_filter *filter)
 {
@@ -146,6 +224,8 @@ static int sim_can_send(const struct device *dev, const struct can_frame *frame,
 			k_timeout_t timeout, can_tx_callback_t callback, void *user_data)
 {
 	ARG_UNUSED(timeout);
+
+	sim_can_wait_for_bus_frame(dev, frame);
 
 	k_spinlock_key_t key = k_spin_lock(&sim_lock);
 	sim_tx_history[sim_tx_count % ARRAY_SIZE(sim_tx_history)] = (struct sim_tx_record){
@@ -273,6 +353,8 @@ static void sim_reset_tx_history(void)
 
 	memset(sim_tx_history, 0, sizeof(sim_tx_history));
 	sim_tx_count = 0;
+	sim_bus_free_cycle = k_cycle_get_32();
+	sim_bus_reserved = false;
 
 	k_spin_unlock(&sim_lock, key);
 }
@@ -350,6 +432,44 @@ static uint32_t sim_count_tx_since(uint32_t start, bool (*match)(const struct ca
 
 	k_spin_unlock(&sim_lock, key);
 	return count;
+}
+
+static void sim_count_dji_7_motor_controls_since(uint32_t start,
+						 uint32_t counts[DJI_7_MOTOR_LOAD_COUNT])
+{
+	k_spinlock_key_t key = k_spin_lock(&sim_lock);
+	uint32_t end = sim_tx_count;
+
+	memset(counts, 0, sizeof(uint32_t) * DJI_7_MOTOR_LOAD_COUNT);
+	for (uint32_t i = start; i < end; i++) {
+		const struct can_frame *frame =
+			&sim_tx_history[i % ARRAY_SIZE(sim_tx_history)].frame;
+
+		if ((frame->flags & CAN_FRAME_IDE) != 0U || frame->dlc != SIM_CAN_DLEN) {
+			continue;
+		}
+		if (frame->id == 0x200U) {
+			for (uint8_t slot = 0; slot < 4U; slot++) {
+				uint16_t value = ((uint16_t)frame->data[slot * 2U] << 8) |
+						 frame->data[slot * 2U + 1U];
+
+				if (value != 0U) {
+					counts[slot]++;
+				}
+			}
+		} else if (frame->id == 0x1ffU) {
+			for (uint8_t slot = 0; slot < 3U; slot++) {
+				uint16_t value = ((uint16_t)frame->data[slot * 2U] << 8) |
+						 frame->data[slot * 2U + 1U];
+
+				if (value != 0U) {
+					counts[4U + slot]++;
+				}
+			}
+		}
+	}
+
+	k_spin_unlock(&sim_lock, key);
 }
 
 static void sim_dump_tx_since(uint32_t start)
@@ -481,6 +601,8 @@ matched:
 static void sim_emit_frame(const struct device *can_dev, const struct can_frame *frame)
 {
 	struct sim_filter filters[SIM_FILTER_MAX];
+
+	sim_can_wait_for_bus_frame(can_dev, frame);
 
 	k_spinlock_key_t key = k_spin_lock(&sim_lock);
 	memcpy(filters, sim_filters, sizeof(filters));
@@ -831,6 +953,13 @@ static void emit_dji_report_for(uint32_t rx_id, int16_t rpm)
 	sim_emit_frame(DEVICE_DT_GET(DT_NODELABEL(fake_can)), &frame);
 }
 
+static void emit_all_dji_load_reports(int16_t rpm)
+{
+	for (uint8_t i = 0; i < ARRAY_SIZE(dji_load_rx_ids); i++) {
+		emit_dji_report_for(dji_load_rx_ids[i], rpm);
+	}
+}
+
 static void emit_dji_report_with_rpm(int16_t rpm)
 {
 	emit_dji_report_for(DJI_RX_ID, rpm);
@@ -1109,7 +1238,6 @@ static void verify_lk_payload_sequence(void)
 		int ret = motor_set_speed(LK_DEV, speeds[i]);
 
 		zassert_equal(ret, 0, "LK rejected speed setpoint %d", ret);
-		lk_tx_data_handler(NULL);
 		expected_lk_speed(speeds[i], payload);
 		expect_payload_sequence_step("LK", match_lk_tx, 0x140U + LK_ID, CAN_STD_ID_MASK,
 					     payload, set_at_ms, emit_lk_feedback,
@@ -1214,13 +1342,59 @@ ZTEST(motor_driver_sim, test_dji_distinct_tx_ids_send_independent_frames)
 				     &previous_match);
 
 	previous_match = UINT32_MAX;
-	expected_dji_current_slot(dji_expected_current(700.0f, 0.0f), 2, payload2);
+	expected_dji_current_slot(dji_expected_current(700.0f, 0.0f), 0, payload2);
 	report_at_ms = (uint32_t)k_uptime_get();
 	emit_dji_report_for(DJI3_RX_ID, 0);
 	service_dji_tx_work();
 	expect_payload_sequence_step("DJI tx 0x1ff", match_dji3_tx, DJI3_TX_ID, CAN_STD_ID_MASK,
 				     payload2, report_at_ms, NULL, DJI_CONTROL_LATENCY_MS, &start,
 				     &previous_match);
+}
+
+ZTEST(motor_driver_sim, test_dji_7_motors_on_one_can_keep_950hz_control)
+{
+	uint32_t counts[DJI_7_MOTOR_LOAD_COUNT];
+	uint32_t start;
+	uint32_t start_cycle;
+	uint32_t end_cycle;
+	uint32_t elapsed_us;
+
+	for (uint8_t i = 0; i < ARRAY_SIZE(dji_load_devs); i++) {
+		zassert_true(device_is_ready(dji_load_devs[i]),
+			     "DJI load motor %u device is not ready", i);
+		driver_motor_control(dji_load_devs[i], ENABLE_MOTOR);
+		configure_dji_speed_test_limits(dji_load_devs[i]);
+		zassert_equal(motor_set_speed(dji_load_devs[i], 1000.0f + (float)(i * 100U)),
+			      0, "DJI load motor %u rejected speed setpoint", i);
+	}
+
+	emit_all_dji_load_reports(0);
+	service_dji_tx_work();
+	k_sleep(K_MSEC(2));
+	sim_reset_tx_history();
+	start = sim_current_tx_count();
+	start_cycle = k_cycle_get_32();
+
+	for (uint32_t round = 0; round < DJI_7_MOTOR_LOAD_ROUNDS; round++) {
+		emit_all_dji_load_reports(0);
+		service_dji_tx_work();
+	}
+
+	end_cycle = k_cycle_get_32();
+	elapsed_us = k_cyc_to_us_near32(end_cycle - start_cycle);
+	zassert_true(elapsed_us > 0U, "DJI load elapsed time was zero");
+
+	sim_count_dji_7_motor_controls_since(start, counts);
+	for (uint8_t i = 0; i < ARRAY_SIZE(counts); i++) {
+		uint32_t hz = (counts[i] * 1000000U) / elapsed_us;
+
+		if (hz < DJI_7_MOTOR_MIN_CONTROL_HZ) {
+			sim_dump_tx_since(start);
+		}
+		zassert_true(hz >= DJI_7_MOTOR_MIN_CONTROL_HZ,
+			     "DJI load motor %u control rate %u Hz below %u Hz (%u frames/%u us)",
+			     i, hz, DJI_7_MOTOR_MIN_CONTROL_HZ, counts[i], elapsed_us);
+	}
 }
 
 static void *motor_driver_sim_setup(void)
@@ -1241,6 +1415,10 @@ static void motor_driver_sim_before(void *fixture)
 	driver_motor_control(DJI_DEV, DISABLE_MOTOR);
 	driver_motor_control(DJI2_DEV, DISABLE_MOTOR);
 	driver_motor_control(DJI3_DEV, DISABLE_MOTOR);
+	driver_motor_control(DJI4_DEV, DISABLE_MOTOR);
+	driver_motor_control(DJI5_DEV, DISABLE_MOTOR);
+	driver_motor_control(DJI6_DEV, DISABLE_MOTOR);
+	driver_motor_control(DJI7_DEV, DISABLE_MOTOR);
 	drain_all_reply_motors_until_quiet(50, 1200);
 	sim_reset_tx_history();
 }

@@ -40,6 +40,8 @@
 
 #define CAN_SEND_STACK_SIZE 4096
 #define CAN_SEND_PRIORITY   -1
+#define LK_STATUS_POLL_PERIOD_MS 8
+#define LK_STATUS_REPLY_FRESH_MS 3
 #define PI                  3.14159265f
 #ifdef RAD2DEG
 #undef RAD2DEG
@@ -82,6 +84,7 @@ struct lk_motor_data {
 	bool update;
 	bool need_init_frames;
 	uint16_t offline_tx_cnt;
+	uint32_t last_status_reply_ms;
 	struct motor_controller_params params[3];
 	bool params_update[3];
 };
