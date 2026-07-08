@@ -18,16 +18,16 @@
 
 #define FLOAT_TOLERANCE 0.0001f
 
-#define MECANUM_DEV          DEVICE_DT_GET(DT_NODELABEL(mecanum0))
-#define MECANUM_MOTOR_DEV    DEVICE_DT_GET(DT_NODELABEL(mecanum_motor))
-#define STEER_DEV            DEVICE_DT_GET(DT_NODELABEL(steer0))
-#define STEER_MOTOR_DEV      DEVICE_DT_GET(DT_NODELABEL(steer_motor))
-#define STEER_DRIVE_DEV      DEVICE_DT_GET(DT_NODELABEL(steer_drive_motor))
-#define CHASSIS_DEV          DEVICE_DT_GET(DT_NODELABEL(chassis0))
-#define CHASSIS_WHEEL0_DEV   DEVICE_DT_GET(DT_NODELABEL(chassis_wheel0))
-#define CHASSIS_WHEEL1_DEV   DEVICE_DT_GET(DT_NODELABEL(chassis_wheel1))
-#define CHASSIS_WHEEL2_DEV   DEVICE_DT_GET(DT_NODELABEL(chassis_wheel2))
-#define CHASSIS_WHEEL3_DEV   DEVICE_DT_GET(DT_NODELABEL(chassis_wheel3))
+#define MECANUM_DEV           DEVICE_DT_GET(DT_NODELABEL(mecanum0))
+#define MECANUM_MOTOR_DEV     DEVICE_DT_GET(DT_NODELABEL(mecanum_motor))
+#define STEER_DEV             DEVICE_DT_GET(DT_NODELABEL(steer0))
+#define STEER_MOTOR_DEV       DEVICE_DT_GET(DT_NODELABEL(steer_motor))
+#define STEER_DRIVE_DEV       DEVICE_DT_GET(DT_NODELABEL(steer_drive_motor))
+#define CHASSIS_DEV           DEVICE_DT_GET(DT_NODELABEL(chassis0))
+#define CHASSIS_WHEEL0_DEV    DEVICE_DT_GET(DT_NODELABEL(chassis_wheel0))
+#define CHASSIS_WHEEL1_DEV    DEVICE_DT_GET(DT_NODELABEL(chassis_wheel1))
+#define CHASSIS_WHEEL2_DEV    DEVICE_DT_GET(DT_NODELABEL(chassis_wheel2))
+#define CHASSIS_WHEEL3_DEV    DEVICE_DT_GET(DT_NODELABEL(chassis_wheel3))
 #define EXPECTED_RPM_1MPS_R01 (RADPS_TO_RPM / 0.1f)
 
 void cchassis_resolve(chassis_data_t *data, const chassis_cfg_t *cfg);

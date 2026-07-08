@@ -413,9 +413,9 @@ void lk_tx_data_handler(struct k_work *work)
 			lk_motor_pack(motor_devices[i], &tx_frame);
 			motor_can_sched_send_reply(cfg->common.phy, &tx_frame,
 						   LK_CMD_ID_BASE + cfg->id, CAN_STD_ID_MASK, 5U,
-						   tx_frame.data[0] == LK_CMD_READ_STAT ?
-							   "lk-read-stat" :
-							   "lk-control");
+						   tx_frame.data[0] == LK_CMD_READ_STAT
+							   ? "lk-read-stat"
+							   : "lk-control");
 		}
 	}
 }
