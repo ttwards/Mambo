@@ -59,27 +59,27 @@ static const struct motor_driver_api gq_motor_api = {
 };
 
 #define GQ_MOTOR_DATA_INST(inst)                                                                   \
-	static struct gq_motor_data gq_motor_data_##inst = {                                      \
-		.common = MOTOR_DT_DRIVER_DATA_INST_GET(inst),                                    \
-		.filter_id = -1,                                                                  \
-		.error = 0,                                                                       \
-		.target_angle = 0.0f,                                                            \
-		.target_rpm = 0.0f,                                                              \
-		.target_torque = 0.0f,                                                           \
-		.kp = 0.0f,                                                                       \
-		.kd = 0.0f,                                                                       \
+	static struct gq_motor_data gq_motor_data_##inst = {                                       \
+		.common = MOTOR_DT_DRIVER_DATA_INST_GET(inst),                                     \
+		.filter_id = -1,                                                                   \
+		.error = 0,                                                                        \
+		.target_angle = 0.0f,                                                              \
+		.target_rpm = 0.0f,                                                                \
+		.target_torque = 0.0f,                                                             \
+		.kp = 0.0f,                                                                        \
+		.kd = 0.0f,                                                                        \
 	}
 
 #define GQ_MOTOR_CONFIG_INST(inst)                                                                 \
-	static const struct gq_motor_config gq_motor_cfg_##inst = {                              \
-		.common = MOTOR_DT_DRIVER_CONFIG_INST_GET(inst),                                  \
-		.enable_canfd = DT_PROP(DT_DRV_INST(inst), enable_canfd),                         \
+	static const struct gq_motor_config gq_motor_cfg_##inst = {                                \
+		.common = MOTOR_DT_DRIVER_CONFIG_INST_GET(inst),                                   \
+		.enable_canfd = DT_PROP(DT_DRV_INST(inst), enable_canfd),                          \
 	}
 
 #define GQ_MOTOR_DEFINE_INST(inst)                                                                 \
-	BUILD_ASSERT(!DT_PROP(DT_DRV_INST(inst), enable_canfd) || IS_ENABLED(CONFIG_CAN_FD_MODE), \
-		     "gq,motor enable-canfd requires CONFIG_CAN_FD_MODE=y");                    \
-	DEVICE_DT_INST_DEFINE(inst, gq_init, NULL, &gq_motor_data_##inst, &gq_motor_cfg_##inst,   \
+	BUILD_ASSERT(!DT_PROP(DT_DRV_INST(inst), enable_canfd) || IS_ENABLED(CONFIG_CAN_FD_MODE),  \
+		     "gq,motor enable-canfd requires CONFIG_CAN_FD_MODE=y");                       \
+	DEVICE_DT_INST_DEFINE(inst, gq_init, NULL, &gq_motor_data_##inst, &gq_motor_cfg_##inst,    \
 			      POST_KERNEL, CONFIG_MOTOR_INIT_PRIORITY, &gq_motor_api)
 
 #define GQ_MOTOR_INST(inst)                                                                        \

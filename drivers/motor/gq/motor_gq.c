@@ -34,8 +34,8 @@ static uint32_t gq_classic_tx_id(const struct gq_motor_config *cfg)
 
 static uint32_t gq_reply_id(const struct gq_motor_config *cfg)
 {
-	return cfg->common.rx_id != 0 ? (uint32_t)cfg->common.rx_id :
-				       (gq_motor_id(cfg) << GQ_REPLY_ID_SHIFT);
+	return cfg->common.rx_id != 0 ? (uint32_t)cfg->common.rx_id
+				      : (gq_motor_id(cfg) << GQ_REPLY_ID_SHIFT);
 }
 
 static int16_t gq_clamp_i16(float value)
@@ -175,8 +175,7 @@ static void gq_pack_classic_control(const struct device *dev, struct can_frame *
 		frame->data[0] = 0x07;
 		frame->data[1] = 0x35;
 		gq_put_i16(&frame->data[2], vel);
-		gq_put_i16(&frame->data[4],
-			   data->target_torque == 0.0f ? GQ_INT16_NAN : tqe);
+		gq_put_i16(&frame->data[4], data->target_torque == 0.0f ? GQ_INT16_NAN : tqe);
 		gq_put_i16(&frame->data[6], pos);
 		break;
 	case VO:
@@ -235,10 +234,9 @@ static void gq_pack_fd_control(const struct device *dev, struct can_frame *frame
 	switch (data->common.mode) {
 	case MIT:
 		gq_init_frame(frame, id, 24, true, true);
-		memcpy(frame->data,
-		       (uint8_t[]){0x01, 0x00, 0x0A, 0x07, 0x20, 0x00, 0x00, 0x00,
-				   0x00, 0x00, 0x00, 0x06, 0x2B, 0x00, 0x00, 0x00,
-				   0x00, 0x14, 0x04, 0x00, 0x11, 0x0F, 0x50, 0x50},
+		memcpy(frame->data, (uint8_t[]){0x01, 0x00, 0x0A, 0x07, 0x20, 0x00, 0x00, 0x00,
+						0x00, 0x00, 0x00, 0x06, 0x2B, 0x00, 0x00, 0x00,
+						0x00, 0x14, 0x04, 0x00, 0x11, 0x0F, 0x50, 0x50},
 		       24);
 		gq_put_i16(&frame->data[5], pos);
 		gq_put_i16(&frame->data[7], vel);
@@ -249,13 +247,11 @@ static void gq_pack_fd_control(const struct device *dev, struct can_frame *frame
 	case PV:
 		gq_init_frame(frame, id, 20, true, true);
 		memcpy(frame->data,
-		       (uint8_t[]){0x01, 0x00, 0x0A, 0x06, 0x20, 0x00, 0x80, 0x00,
-				   0x00, 0x06, 0x25, 0x00, 0x00, 0x00, 0x00, 0x14,
-				   0x04, 0x00, 0x11, 0x0F},
+		       (uint8_t[]){0x01, 0x00, 0x0A, 0x06, 0x20, 0x00, 0x80, 0x00, 0x00, 0x06,
+				   0x25, 0x00, 0x00, 0x00, 0x00, 0x14, 0x04, 0x00, 0x11, 0x0F},
 		       20);
 		gq_put_i16(&frame->data[7], vel);
-		gq_put_i16(&frame->data[11],
-			   data->target_torque == 0.0f ? GQ_INT16_NAN : tqe);
+		gq_put_i16(&frame->data[11], data->target_torque == 0.0f ? GQ_INT16_NAN : tqe);
 		gq_put_i16(&frame->data[13], pos);
 		break;
 	case VO:
@@ -269,10 +265,9 @@ static void gq_pack_fd_control(const struct device *dev, struct can_frame *frame
 			gq_put_i16(&frame->data[10], tqe);
 		} else {
 			gq_init_frame(frame, id, 20, true, true);
-			memcpy(frame->data,
-			       (uint8_t[]){0x01, 0x00, 0x0A, 0x06, 0x20, 0x00, 0x80, 0x00,
-					   0x00, 0x14, 0x04, 0x00, 0x11, 0x0F, 0x50, 0x50,
-					   0x00, 0x00, 0x00, 0x00},
+			memcpy(frame->data, (uint8_t[]){0x01, 0x00, 0x0A, 0x06, 0x20, 0x00, 0x80,
+							0x00, 0x00, 0x14, 0x04, 0x00, 0x11, 0x0F,
+							0x50, 0x50, 0x00, 0x00, 0x00, 0x00},
 			       20);
 			gq_put_i16(&frame->data[7], vel);
 		}
@@ -283,8 +278,8 @@ static void gq_pack_fd_control(const struct device *dev, struct can_frame *frame
 }
 #endif /* CONFIG_CAN_FD_MODE */
 
-static void gq_parse_state_int16(const struct device *dev, uint8_t mode, uint8_t fault,
-				 int16_t pos, int16_t vel, int16_t tqe)
+static void gq_parse_state_int16(const struct device *dev, uint8_t mode, uint8_t fault, int16_t pos,
+				 int16_t vel, int16_t tqe)
 {
 	struct gq_motor_data *data = dev->data;
 
@@ -420,8 +415,8 @@ int gq_init(const struct device *dev)
 		.mask = GQ_REPLY_ID_MASK,
 		.flags = CAN_FILTER_IDE,
 	};
-	data->filter_id = can_add_rx_filter(cfg->common.phy, gq_can_rx_handler, (void *)dev,
-					    &data->filter);
+	data->filter_id =
+		can_add_rx_filter(cfg->common.phy, gq_can_rx_handler, (void *)dev, &data->filter);
 	if (data->filter_id < 0) {
 		motor_stats_inc(MOTOR_STAT_CAN_FILTER_ERROR);
 		return data->filter_id;
@@ -516,8 +511,8 @@ int gq_set(const struct device *dev, motor_setpoint_t *setpoint)
 	if (cfg->common.controllers[setpoint->controller_id].param_count > 0) {
 		struct motor_controller_params params = {0};
 
-		if (motor_controller_get_params(&cfg->common.controllers[setpoint->controller_id], 0,
-						&params) == 0) {
+		if (motor_controller_get_params(&cfg->common.controllers[setpoint->controller_id],
+						0, &params) == 0) {
 			data->kp = params.k_p;
 			data->kd = params.k_d;
 		}
