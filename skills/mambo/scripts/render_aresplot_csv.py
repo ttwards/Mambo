@@ -21,7 +21,9 @@ class Point:
     values: dict[str, float]
 
 
-def _unwrapped_seconds(raw_timestamp: int, previous_raw: int | None, previous_ms: int | None) -> tuple[int, int]:
+def _unwrapped_seconds(
+    raw_timestamp: int, previous_raw: int | None, previous_ms: int | None
+) -> tuple[int, int]:
     if previous_raw is None or previous_ms is None:
         return raw_timestamp, raw_timestamp
     if raw_timestamp >= previous_raw:
@@ -32,7 +34,9 @@ def _unwrapped_seconds(raw_timestamp: int, previous_raw: int | None, previous_ms
     return raw_timestamp, previous_ms + 1
 
 
-def read_csv(path: Path, requested: list[str]) -> tuple[list[Point], list[str], int, int]:
+def read_csv(
+    path: Path, requested: list[str]
+) -> tuple[list[Point], list[str], int, int]:
     try:
         source = path.open(newline="", encoding="utf-8")
     except FileNotFoundError as exc:
@@ -41,7 +45,11 @@ def read_csv(path: Path, requested: list[str]) -> tuple[list[Point], list[str], 
         reader = csv.DictReader(source)
         if not reader.fieldnames or "timestamp_ms" not in reader.fieldnames:
             raise RenderError("CSV must contain a timestamp_ms column")
-        default_series = [name for name in reader.fieldnames if name not in ("timestamp_ms", "host_time_utc")]
+        default_series = [
+            name
+            for name in reader.fieldnames
+            if name not in ("timestamp_ms", "host_time_utc")
+        ]
         series = requested or default_series
         missing = [name for name in series if name not in reader.fieldnames]
         if missing:
@@ -68,7 +76,9 @@ def read_csv(path: Path, requested: list[str]) -> tuple[list[Point], list[str], 
                 continue
             if previous_raw is not None and raw < previous_raw:
                 resets_or_wraps += 1
-            previous_raw, unwrapped = _unwrapped_seconds(raw, previous_raw, previous_unwrapped)
+            previous_raw, unwrapped = _unwrapped_seconds(
+                raw, previous_raw, previous_unwrapped
+            )
             previous_unwrapped = unwrapped
             if first_ms is None:
                 first_ms = unwrapped
@@ -83,11 +93,22 @@ def parse_series(items: list[str]) -> list[str]:
     return list(dict.fromkeys(values))
 
 
-def render(input_path: Path, output_path: Path, series_items: list[str], start: float | None, end: float | None) -> tuple[int, int, int]:
+def render(
+    input_path: Path,
+    output_path: Path,
+    series_items: list[str],
+    start: float | None,
+    end: float | None,
+) -> tuple[int, int, int]:
     if start is not None and end is not None and start > end:
         raise RenderError("--start must not be greater than --end")
     points, series, malformed, resets = read_csv(input_path, parse_series(series_items))
-    selected = [point for point in points if (start is None or point.seconds >= start) and (end is None or point.seconds <= end)]
+    selected = [
+        point
+        for point in points
+        if (start is None or point.seconds >= start)
+        and (end is None or point.seconds <= end)
+    ]
     if not selected:
         raise RenderError("selected time interval contains no valid samples")
     try:
@@ -96,11 +117,18 @@ def render(input_path: Path, output_path: Path, series_items: list[str], start: 
         matplotlib.use("Agg")
         from matplotlib import pyplot as plt
     except ImportError as exc:
-        raise RenderError("matplotlib is missing; install it with: python3 -m pip install matplotlib") from exc
+        raise RenderError(
+            "matplotlib is missing; install it with: python3 -m pip install matplotlib"
+        ) from exc
 
     figure, axis = plt.subplots(figsize=(11, 5.5), constrained_layout=True)
     for name in series:
-        axis.plot([point.seconds for point in selected], [point.values[name] for point in selected], label=name, linewidth=1.2)
+        axis.plot(
+            [point.seconds for point in selected],
+            [point.values[name] for point in selected],
+            label=name,
+            linewidth=1.2,
+        )
     axis.set_title(f"AresPlot capture: {input_path.name}")
     axis.set_xlabel("MCU time since first sample (s)")
     axis.set_ylabel("Value (AresPlot float32 payload)")
@@ -115,9 +143,18 @@ def render(input_path: Path, output_path: Path, series_items: list[str], start: 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("csv", type=Path, help="CSV produced by aresplot_capture.py")
-    parser.add_argument("--series", action="append", default=[], help="series name; repeat or use comma-separated names")
-    parser.add_argument("--start", type=float, help="inclusive start, seconds in unwrapped MCU timeline")
-    parser.add_argument("--end", type=float, help="inclusive end, seconds in unwrapped MCU timeline")
+    parser.add_argument(
+        "--series",
+        action="append",
+        default=[],
+        help="series name; repeat or use comma-separated names",
+    )
+    parser.add_argument(
+        "--start", type=float, help="inclusive start, seconds in unwrapped MCU timeline"
+    )
+    parser.add_argument(
+        "--end", type=float, help="inclusive end, seconds in unwrapped MCU timeline"
+    )
     parser.add_argument("--output", required=True, type=Path, help="output PNG path")
     return parser
 
@@ -125,11 +162,15 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        count, malformed, resets = render(args.csv, args.output, args.series, args.start, args.end)
+        count, malformed, resets = render(
+            args.csv, args.output, args.series, args.start, args.end
+        )
     except RenderError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    print(f"rendered {count} samples to {args.output}; malformed_rows={malformed}, timestamp_wraps_or_resets={resets}")
+    print(
+        f"rendered {count} samples to {args.output}; malformed_rows={malformed}, timestamp_wraps_or_resets={resets}"
+    )
     return 0
 
 

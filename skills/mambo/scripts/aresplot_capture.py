@@ -160,8 +160,11 @@ def make_frame(command: int, payload: bytes) -> bytes:
     if len(payload) > 0xFFFF:
         raise CaptureError("AresPlot payload exceeds the uint16 protocol length")
     length = len(payload)
-    return bytes((SOP, command)) + struct.pack("<H", length) + payload + bytes(
-        (checksum(command, length, payload), EOP)
+    return (
+        bytes((SOP, command))
+        + struct.pack("<H", length)
+        + payload
+        + bytes((checksum(command, length, payload), EOP))
     )
 
 
@@ -175,7 +178,9 @@ def _parse_int(value: Any, field: str) -> int:
     try:
         parsed = int(value, 16 if value.lower().startswith("0x") else 10)
     except ValueError as exc:
-        raise CaptureError(f"{field} must be an integer or 0x-prefixed integer string") from exc
+        raise CaptureError(
+            f"{field} must be an integer or 0x-prefixed integer string"
+        ) from exc
     return parsed
 
 
@@ -195,7 +200,9 @@ def _parse_narrow_ranges(value: Any) -> tuple[tuple[int, int], ...]:
             raise CaptureError(f"address_ranges[{index}] must be an object")
         start = _parse_int(item.get("start"), f"address_ranges[{index}].start")
         stop = _parse_int(item.get("end"), f"address_ranges[{index}].end")
-        if start > stop or not _inside_ranges(start, stop - start + 1, DM_MC02_SAFE_RANGES):
+        if start > stop or not _inside_ranges(
+            start, stop - start + 1, DM_MC02_SAFE_RANGES
+        ):
             raise CaptureError(
                 f"address_ranges[{index}] must narrow a known DM-MC02 RAM range, not expand it"
             )
@@ -211,7 +218,9 @@ def _load_json(path: Path) -> dict[str, Any]:
     except UnicodeDecodeError as exc:
         raise CaptureError(f"config is not UTF-8 JSON: {path}") from exc
     except json.JSONDecodeError as exc:
-        raise CaptureError(f"bad JSON in {path}: line {exc.lineno}, column {exc.colno}: {exc.msg}") from exc
+        raise CaptureError(
+            f"bad JSON in {path}: line {exc.lineno}, column {exc.colno}: {exc.msg}"
+        ) from exc
     if not isinstance(value, dict):
         raise CaptureError("config root must be a JSON object")
     return value
@@ -234,7 +243,13 @@ def load_config(path: Path, args: argparse.Namespace) -> CaptureConfig:
         raw.pop("sample_rate_hz", None)
         raw["sample_period_ms"] = args.sample_period_ms
 
-    required = ("serial_port", "baud_rate", "duration_seconds", "output_csv", "variables")
+    required = (
+        "serial_port",
+        "baud_rate",
+        "duration_seconds",
+        "output_csv",
+        "variables",
+    )
     missing = [field for field in required if field not in raw]
     if missing:
         raise CaptureError("missing required config field(s): " + ", ".join(missing))
@@ -250,7 +265,9 @@ def load_config(path: Path, args: argparse.Namespace) -> CaptureConfig:
     else:
         sample_rate_hz = _parse_int(raw["sample_rate_hz"], "sample_rate_hz")
     if not 1 <= sample_rate_hz <= 1000:
-        raise CaptureError("sample_rate_hz must be within 1..1000 for the current firmware timer")
+        raise CaptureError(
+            "sample_rate_hz must be within 1..1000 for the current firmware timer"
+        )
 
     port = raw["serial_port"]
     if not isinstance(port, str) or not port.strip():
@@ -269,7 +286,9 @@ def load_config(path: Path, args: argparse.Namespace) -> CaptureConfig:
     except (TypeError, ValueError) as exc:
         raise CaptureError("ack_timeout_seconds must be a number") from exc
     if not math.isfinite(ack_timeout) or ack_timeout <= 0:
-        raise CaptureError("ack_timeout_seconds must be a finite number greater than zero")
+        raise CaptureError(
+            "ack_timeout_seconds must be a finite number greater than zero"
+        )
     max_frame_bytes = _parse_int(raw.get("max_frame_bytes", 256), "max_frame_bytes")
     if not 64 <= max_frame_bytes <= MAX_PROTOCOL_FRAME:
         raise CaptureError("max_frame_bytes must be within 64..512")
@@ -296,7 +315,9 @@ def load_config(path: Path, args: argparse.Namespace) -> CaptureConfig:
             raise CaptureError(f"variables[{index}] must be an object")
         name = item.get("name")
         if not isinstance(name, str) or not name or name in names:
-            raise CaptureError(f"variables[{index}].name must be a unique non-empty string")
+            raise CaptureError(
+                f"variables[{index}].name must be a unique non-empty string"
+            )
         type_name = item.get("type")
         if type_name == "float64":
             raise CaptureError(
@@ -355,23 +376,35 @@ def _open_serial(config: CaptureConfig):
     try:
         import serial
     except ImportError as exc:
-        raise CaptureError("pyserial is missing; install it in this Python environment: python3 -m pip install pyserial") from exc
+        raise CaptureError(
+            "pyserial is missing; install it in this Python environment: python3 -m pip install pyserial"
+        ) from exc
     try:
-        return serial.Serial(config.serial_port, config.baud_rate, timeout=0.1, write_timeout=2)
+        return serial.Serial(
+            config.serial_port, config.baud_rate, timeout=0.1, write_timeout=2
+        )
     except PermissionError as exc:
-        raise CaptureError(f"serial permission denied for {config.serial_port}; check group/udev or OS driver access") from exc
+        raise CaptureError(
+            f"serial permission denied for {config.serial_port}; check group/udev or OS driver access"
+        ) from exc
     except serial.SerialException as exc:
         message = str(exc)
         if "Permission" in message or "permission" in message:
-            raise CaptureError(f"serial permission denied for {config.serial_port}; check group/udev or OS driver access") from exc
-        raise CaptureError(f"cannot open serial port {config.serial_port}: {message}") from exc
+            raise CaptureError(
+                f"serial permission denied for {config.serial_port}; check group/udev or OS driver access"
+            ) from exc
+        raise CaptureError(
+            f"cannot open serial port {config.serial_port}: {message}"
+        ) from exc
 
 
 def _write_frame(serial_port: Any, frame: bytes) -> None:
     try:
         written = serial_port.write(frame)
         if written != len(frame):
-            raise CaptureError(f"serial short write: sent {written!r} of {len(frame)} bytes")
+            raise CaptureError(
+                f"serial short write: sent {written!r} of {len(frame)} bytes"
+            )
         serial_port.flush()
     except CaptureError:
         raise
@@ -379,13 +412,17 @@ def _write_frame(serial_port: Any, frame: bytes) -> None:
         raise CaptureError(f"serial write failed: {exc}") from exc
 
 
-def _wait_for_ack(serial_port: Any, parser: FrameParser, command: int, timeout: float) -> None:
+def _wait_for_ack(
+    serial_port: Any, parser: FrameParser, command: int, timeout: float
+) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
             data = serial_port.read(256)
         except Exception as exc:
-            raise CaptureError(f"serial read failed while waiting for ACK: {exc}") from exc
+            raise CaptureError(
+                f"serial read failed while waiting for ACK: {exc}"
+            ) from exc
         for frame in parser.feed(data):
             if frame.command != CMD_ACK:
                 continue
@@ -399,10 +436,14 @@ def _wait_for_ack(serial_port: Any, parser: FrameParser, command: int, timeout: 
                     f"device rejected command 0x{command:02x}: {ACK_STATUS.get(status, f'0x{status:02x}') }"
                 )
             return
-    raise CaptureError(f"timeout waiting {timeout:g}s for ACK to command 0x{command:02x}")
+    raise CaptureError(
+        f"timeout waiting {timeout:g}s for ACK to command 0x{command:02x}"
+    )
 
 
-def _monitor_values(frame: Frame, variable_count: int) -> tuple[int, tuple[float, ...]] | None:
+def _monitor_values(
+    frame: Frame, variable_count: int
+) -> tuple[int, tuple[float, ...]] | None:
     if frame.command != CMD_MONITOR_DATA:
         return None
     expected = 4 + 4 * variable_count
@@ -427,21 +468,39 @@ def capture(config: CaptureConfig) -> tuple[int, int, FrameParser]:
             serial_port.reset_input_buffer()
         except Exception:
             pass
-        _write_frame(serial_port, make_frame(CMD_SET_SAMPLE_RATE, struct.pack("<I", config.sample_rate_hz)))
-        _wait_for_ack(serial_port, parser, CMD_SET_SAMPLE_RATE, config.ack_timeout_seconds)
-        _write_frame(serial_port, make_frame(CMD_START_MONITOR, start_monitor_payload(config.variables)))
+        _write_frame(
+            serial_port,
+            make_frame(CMD_SET_SAMPLE_RATE, struct.pack("<I", config.sample_rate_hz)),
+        )
+        _wait_for_ack(
+            serial_port, parser, CMD_SET_SAMPLE_RATE, config.ack_timeout_seconds
+        )
+        _write_frame(
+            serial_port,
+            make_frame(CMD_START_MONITOR, start_monitor_payload(config.variables)),
+        )
         # Once a complete start frame is sent, attempt STOP even if its ACK is lost.
         monitoring_started = True
-        _wait_for_ack(serial_port, parser, CMD_START_MONITOR, config.ack_timeout_seconds)
+        _wait_for_ack(
+            serial_port, parser, CMD_START_MONITOR, config.ack_timeout_seconds
+        )
         deadline = time.monotonic() + config.duration_seconds
         with output.open("w", newline="", encoding="utf-8") as csv_file:
             writer = csv.writer(csv_file)
-            writer.writerow(["timestamp_ms", "host_time_utc", *[item.name for item in config.variables]])
+            writer.writerow(
+                [
+                    "timestamp_ms",
+                    "host_time_utc",
+                    *[item.name for item in config.variables],
+                ]
+            )
             while time.monotonic() < deadline:
                 try:
                     data = serial_port.read(512)
                 except Exception as exc:
-                    raise CaptureError(f"serial read failed during capture: {exc}") from exc
+                    raise CaptureError(
+                        f"serial read failed during capture: {exc}"
+                    ) from exc
                 for frame in parser.feed(data):
                     sample = _monitor_values(frame, len(config.variables))
                     if sample is None:
@@ -455,7 +514,9 @@ def capture(config: CaptureConfig) -> tuple[int, int, FrameParser]:
                     writer.writerow(
                         [
                             timestamp_ms,
-                            dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds"),
+                            dt.datetime.now(dt.timezone.utc).isoformat(
+                                timespec="milliseconds"
+                            ),
                             *values,
                         ]
                     )
@@ -465,23 +526,42 @@ def capture(config: CaptureConfig) -> tuple[int, int, FrameParser]:
             try:
                 _write_frame(serial_port, make_frame(CMD_START_MONITOR, b"\x00"))
             except CaptureError as exc:
-                print(f"warning: failed to stop monitoring cleanly: {exc}", file=sys.stderr)
+                print(
+                    f"warning: failed to stop monitoring cleanly: {exc}",
+                    file=sys.stderr,
+                )
         try:
             serial_port.close()
         except Exception as exc:
-            print(f"warning: failed to close serial port cleanly: {exc}", file=sys.stderr)
+            print(
+                f"warning: failed to close serial port cleanly: {exc}", file=sys.stderr
+            )
     return samples, timestamp_gaps, parser
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", required=True, type=Path, help="capture JSON config")
-    parser.add_argument("--trusted-debug-target", action="store_true", help="confirm trusted target and reviewed addresses")
+    parser.add_argument(
+        "--config", required=True, type=Path, help="capture JSON config"
+    )
+    parser.add_argument(
+        "--trusted-debug-target",
+        action="store_true",
+        help="confirm trusted target and reviewed addresses",
+    )
     parser.add_argument("--port", help="override serial_port")
     parser.add_argument("--baud", type=int, help="override baud_rate")
     rate = parser.add_mutually_exclusive_group()
-    rate.add_argument("--sample-rate-hz", type=int, help="override sample rate; encoded as protocol uint32 rate_hz")
-    rate.add_argument("--sample-period-ms", type=int, help="override period; converted to whole rate_hz before transmission")
+    rate.add_argument(
+        "--sample-rate-hz",
+        type=int,
+        help="override sample rate; encoded as protocol uint32 rate_hz",
+    )
+    rate.add_argument(
+        "--sample-period-ms",
+        type=int,
+        help="override period; converted to whole rate_hz before transmission",
+    )
     parser.add_argument("--duration", type=float, help="override duration_seconds")
     parser.add_argument("--output", help="override output_csv")
     return parser
@@ -490,7 +570,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if not args.trusted_debug_target:
-        print("error: refuse to send raw addresses without --trusted-debug-target", file=sys.stderr)
+        print(
+            "error: refuse to send raw addresses without --trusted-debug-target",
+            file=sys.stderr,
+        )
         return 2
     try:
         config = load_config(args.config, args)

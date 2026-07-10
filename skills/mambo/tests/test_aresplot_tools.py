@@ -24,8 +24,12 @@ def load_module(name: str, path: Path):
     return module
 
 
-capture = load_module("mambo_aresplot_capture", ROOT / "scripts" / "aresplot_capture.py")
-renderer = load_module("mambo_aresplot_renderer", ROOT / "scripts" / "render_aresplot_csv.py")
+capture = load_module(
+    "mambo_aresplot_capture", ROOT / "scripts" / "aresplot_capture.py"
+)
+renderer = load_module(
+    "mambo_aresplot_renderer", ROOT / "scripts" / "render_aresplot_csv.py"
+)
 
 
 class FrameParserTests(unittest.TestCase):
@@ -40,20 +44,27 @@ class FrameParserTests(unittest.TestCase):
         self.assertGreaterEqual(parser.discarded_bytes, 4)
 
     def test_bad_checksum_and_eop_do_not_hide_later_valid_frame(self) -> None:
-        valid = capture.make_frame(capture.CMD_ACK, bytes((capture.CMD_START_MONITOR, 0)))
+        valid = capture.make_frame(
+            capture.CMD_ACK, bytes((capture.CMD_START_MONITOR, 0))
+        )
         bad_checksum = bytearray(valid)
         bad_checksum[-2] ^= 0x01
         bad_eop = bytearray(valid)
         bad_eop[-1] = 0x00
         parser = capture.FrameParser()
         received = parser.feed(bytes(bad_checksum) + bytes(bad_eop) + valid)
-        self.assertEqual(received, [capture.Frame(capture.CMD_ACK, bytes((capture.CMD_START_MONITOR, 0)))])
+        self.assertEqual(
+            received,
+            [capture.Frame(capture.CMD_ACK, bytes((capture.CMD_START_MONITOR, 0)))],
+        )
         self.assertEqual(parser.bad_checksum, 1)
         self.assertEqual(parser.bad_eop, 1)
 
     def test_start_payload_and_rate_wire_encoding(self) -> None:
         variable = capture.Variable("x", 0x24000100, "uint32")
-        self.assertEqual(capture.start_monitor_payload([variable]), b"\x01\x00\x01\x00\x24\x05")
+        self.assertEqual(
+            capture.start_monitor_payload([variable]), b"\x01\x00\x01\x00\x24\x05"
+        )
         frame = capture.make_frame(capture.CMD_SET_SAMPLE_RATE, struct.pack("<I", 100))
         parsed = capture.FrameParser().feed(frame)
         self.assertEqual(parsed[0].payload, b"d\x00\x00\x00")
@@ -62,7 +73,14 @@ class FrameParserTests(unittest.TestCase):
 class ConfigTests(unittest.TestCase):
     @staticmethod
     def args() -> SimpleNamespace:
-        return SimpleNamespace(port=None, baud=None, duration=None, output=None, sample_rate_hz=None, sample_period_ms=None)
+        return SimpleNamespace(
+            port=None,
+            baud=None,
+            duration=None,
+            output=None,
+            sample_rate_hz=None,
+            sample_period_ms=None,
+        )
 
     def write_config(self, directory: Path, variable_type: str = "float32") -> Path:
         path = directory / "capture.json"
@@ -74,26 +92,35 @@ class ConfigTests(unittest.TestCase):
   "duration_seconds": 1,
   "output_csv": "capture.csv",
   "variables": [{"name": "x", "address": "0x24000100", "type": "%s"}]
-}""" % variable_type,
+}"""
+            % variable_type,
             encoding="utf-8",
         )
         return path
 
     def test_period_converts_to_wire_rate(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            config = capture.load_config(self.write_config(Path(directory)), self.args())
+            config = capture.load_config(
+                self.write_config(Path(directory)), self.args()
+            )
         self.assertEqual(config.sample_rate_hz, 100)
 
     def test_float64_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(capture.CaptureError, "float64 is not capture-compatible"):
-                capture.load_config(self.write_config(Path(directory), "float64"), self.args())
+            with self.assertRaisesRegex(
+                capture.CaptureError, "float64 is not capture-compatible"
+            ):
+                capture.load_config(
+                    self.write_config(Path(directory), "float64"), self.args()
+                )
 
     def test_nonfinite_duration_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_config(Path(directory))
             path.write_text(
-                path.read_text(encoding="utf-8").replace('"duration_seconds": 1', '"duration_seconds": NaN'),
+                path.read_text(encoding="utf-8").replace(
+                    '"duration_seconds": 1', '"duration_seconds": NaN'
+                ),
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(capture.CaptureError, "finite number"):
@@ -131,11 +158,17 @@ class CaptureTests(unittest.TestCase):
                 raise AssertionError("capture wrote an invalid or incomplete frame")
             frame = frames[0]
             self.commands.append(frame)
-            is_stop = frame.command == capture.CMD_START_MONITOR and frame.payload == b"\x00"
+            is_stop = (
+                frame.command == capture.CMD_START_MONITOR and frame.payload == b"\x00"
+            )
             if frame.command == capture.CMD_SET_SAMPLE_RATE or (
-                frame.command == capture.CMD_START_MONITOR and self.acknowledge_start and not is_stop
+                frame.command == capture.CMD_START_MONITOR
+                and self.acknowledge_start
+                and not is_stop
             ):
-                self.pending.extend(capture.make_frame(capture.CMD_ACK, bytes((frame.command, 0))))
+                self.pending.extend(
+                    capture.make_frame(capture.CMD_ACK, bytes((frame.command, 0)))
+                )
             return len(data)
 
         def flush(self) -> None:
@@ -175,7 +208,12 @@ class CaptureTests(unittest.TestCase):
             [(frame.command, frame.payload) for frame in fake.commands],
             [
                 (capture.CMD_SET_SAMPLE_RATE, struct.pack("<I", 100)),
-                (capture.CMD_START_MONITOR, capture.start_monitor_payload(self.config(Path("unused")).variables)),
+                (
+                    capture.CMD_START_MONITOR,
+                    capture.start_monitor_payload(
+                        self.config(Path("unused")).variables
+                    ),
+                ),
                 (capture.CMD_START_MONITOR, b"\x00"),
             ],
         )
@@ -188,10 +226,14 @@ class CaptureTests(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory() as directory:
                 with self.assertRaisesRegex(capture.CaptureError, "timeout waiting"):
-                    capture.capture(self.config(Path(directory) / "capture.csv", ack_timeout=0.001))
+                    capture.capture(
+                        self.config(Path(directory) / "capture.csv", ack_timeout=0.001)
+                    )
         finally:
             capture._open_serial = original
-        self.assertEqual(fake.commands[-1], capture.Frame(capture.CMD_START_MONITOR, b"\x00"))
+        self.assertEqual(
+            fake.commands[-1], capture.Frame(capture.CMD_START_MONITOR, b"\x00")
+        )
         self.assertTrue(fake.closed)
 
     def test_short_serial_write_is_rejected(self) -> None:
