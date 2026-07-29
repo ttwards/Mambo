@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mambo Embedded Robotics"
+  short_description: "Build and debug Mambo Zephyr robots safely"
+  default_prompt: "Use $mambo to build and safely debug my DM-MC02 robot program."
