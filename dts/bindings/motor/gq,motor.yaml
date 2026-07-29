@@ -1,0 +1,32 @@
+description: Gaoqing Motor
+
+compatible: "gq,motor"
+
+include: [base.yaml]
+
+properties:
+  id:
+    type: int
+    required: true
+  tx_id:
+    type: int
+    required: false
+    description: >
+      CAN transmit ID override. If omitted, the driver uses the motor id for
+      classic CAN control frames and protocol-defined extended IDs for
+      configuration or CAN FD frames.
+  rx_id:
+    type: int
+    required: false
+    description: >
+      CAN receive ID override. If omitted, the driver expects replies on
+      motor id shifted left by 8, matching the vendor examples.
+  can_channel:
+    type: phandle
+    required: true
+  controllers:
+    type: phandles
+    required: false
+  enable-canfd:
+    type: boolean
+    description: Use the Gaoqing CAN FD protocol instead of classic CAN 2.0.

@@ -1,0 +1,31 @@
+/ {
+	motor {
+		gq_motor: gq_motor {
+			compatible = "gq,motor";
+			status = "okay";
+			id = <1>;
+			can_channel = <&can1>;
+			controllers = <&gq_mit &gq_speed &gq_position>;
+		};
+	};
+
+	controllers {
+		gq_mit: gq_mit {
+			compatible = "motor-controller,mit";
+			k_p = "2";
+			k_d = "0.5";
+		};
+
+		gq_speed: gq_speed {
+			compatible = "motor-controller,vo";
+			target = "speed";
+			k_p = "0";
+		};
+
+		gq_position: gq_position {
+			compatible = "motor-controller,pv";
+			pos_k_p = "0";
+			vel_k_p = "0";
+		};
+	};
+};

@@ -61,6 +61,14 @@
 		auto_report;
 	};
 
+	gq0: gq0 {
+		compatible = "gq,motor";
+		status = "okay";
+		id = <5>;
+		can_channel = <&fake_can>;
+		controllers = <&test_mit &test_speed>;
+	};
+
 	lk0: lk0 {
 		compatible = "lk,motor";
 		status = "okay";

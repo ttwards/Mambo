@@ -1,0 +1,21 @@
+# Copyright (c) 2026 ttwards <12411711@mail.sustech.edu.cn>
+# SPDX-License-Identifier: Apache-2.0
+
+sample:
+  name: Gaoqing motor demo
+tests:
+  sample.motor.gq:
+    tags:
+      - motor
+      - can
+    platform_allow:
+      - dm_mc02
+      - robomaster_board_c
+    integration_platforms:
+      - dm_mc02
+      - robomaster_board_c
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "Gaoqing motor demo started"

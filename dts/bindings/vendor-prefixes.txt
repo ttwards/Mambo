@@ -1,5 +1,6 @@
 dji	DaJiang Innovation Inc.
 dm	DaMiao Bot Inc.
+gq	Gaoqing Motor.
 mi	Xiaomi Corp.
 motor-controller	ARES motor controller profiles
 pid	PID Controller
