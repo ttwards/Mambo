@@ -119,18 +119,3 @@ pre-commit run --all-files
 ```
 
 VS Code example settings are available in `VSC_sample_configs/`. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
-
-## Codex Skill
-
-The repository includes an Agentic Embedded Skill at [`skills/mambo`](skills/mambo/SKILL.md). It guides Codex through Mambo/Zephyr setup, small verifiable program changes, and safe debugging with the DM-MC02, CMSIS-DAP, AresPlot, and the bundled serial capture tools.
-
-From the repository root, link the Skill into the personal Codex skill directory:
-
-```shell
-mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
-ln -s "$PWD/skills/mambo" "${CODEX_HOME:-$HOME/.codex}/skills/mambo"
-```
-
-Invoke it with `$mambo`. Beginner mode is the default and teaches one evidence-backed step at a time. Explicitly request `expert mode` for concise, batched diagnostics. Both modes require authorization before flashing, attaching a debug probe, or enabling actuator power.
-
-The Skill also bundles read-only AresPlot CSV capture, time-window rendering, a JSON configuration example, and the DM-MC02 V1.1 manual under [`skills/mambo/references`](skills/mambo/references) and [`skills/mambo/scripts`](skills/mambo/scripts).

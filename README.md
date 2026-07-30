@@ -120,21 +120,6 @@ pre-commit run --all-files
 
 VS Code 示例配置位于 `VSC_sample_configs/`。贡献流程和提交规范见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-## Codex Skill
-
-仓库在 [`skills/mambo`](skills/mambo/SKILL.md) 内置了面向 Mambo 的 Agentic Embedded Skill，用于指导 Codex 配置 Mambo/Zephyr 环境、编写最小可验证程序，并通过 DM-MC02、CMSIS-DAP、AresPlot 和串口采集工具进行安全调试。
-
-从仓库根目录将 Skill 链接到个人 Codex 技能目录：
-
-```shell
-mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
-ln -s "$PWD/skills/mambo" "${CODEX_HOME:-$HOME/.codex}/skills/mambo"
-```
-
-安装后可通过 `$mambo` 调用。默认使用新生模式，以简单中文逐步解释并核对构建、接线和运行证据；明确说“专家模式”或“老手模式”后，才会切换为更精简的批量诊断。两种模式都不会在未授权时烧录固件、连接调试探针或启用执行器电源。
-
-Skill 同时提供只读 AresPlot CSV 采集、按时间区间绘图、JSON 配置示例和 DM-MC02 V1.1 使用说明书，详见 [`skills/mambo/references`](skills/mambo/references) 与 [`skills/mambo/scripts`](skills/mambo/scripts)。
-
 ## 文档
 
 - 文档入口：[Documents/README.md](Documents/README.md)
